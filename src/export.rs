@@ -1,4 +1,4 @@
-//! Exports — symbols this image makes available to other dylibs.
+//! Exports - symbols this image makes available to other dylibs.
 //!
 //! Walks both the modern `LC_DYLD_EXPORTS_TRIE` (linkedit-data
 //! command pointing at a standalone trie) and the legacy
@@ -7,13 +7,13 @@
 //! to the crate's typed view-type pattern.
 //!
 //! Names are reconstructed from trie edges and therefore *owned*
-//! `String`s rather than borrowed slices — the trie does not
+//! `String`s rather than borrowed slices - the trie does not
 //! preserve a contiguous range of bytes for each export name.
 //!
 //! ## Lifetime parameter
 //!
 //! Like [`crate::import`], this module collapses the kickoff's
-//! `Export<'a, 'p>` sketch to a single `'p` — see that module's
+//! `Export<'a, 'p>` sketch to a single `'p` - see that module's
 //! doc-comment for the underlying reason (goblin ties the strings
 //! to the `&self` borrow rather than to the data lifetime).
 
@@ -28,7 +28,7 @@ use goblin::mach::exports::{
 pub struct Export<'p> {
     /// Mangled symbol name (as `dyld` matches it).
     pub name: String,
-    /// Symbol kind — regular, absolute, thread-local, or unknown.
+    /// Symbol kind - regular, absolute, thread-local, or unknown.
     pub kind: ExportKind,
     /// Raw `EXPORT_SYMBOL_FLAGS_*` byte from the trie node.
     pub flags: u64,
@@ -36,7 +36,7 @@ pub struct Export<'p> {
     pub is_weak_definition: bool,
     /// Detailed payload depending on the kind / flags.
     pub info: ExportInfo<'p>,
-    /// Offset / address recorded for this export — VM address for
+    /// Offset / address recorded for this export - VM address for
     /// `Regular`, image-relative stub offset for `Stub`, `0` for
     /// `Reexport`.
     pub offset: u64,
@@ -48,19 +48,19 @@ pub struct Export<'p> {
 /// Cite: `mach-o/loader.h:1494-1503` (`EXPORT_SYMBOL_FLAGS_KIND_*`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExportKind {
-    /// `EXPORT_SYMBOL_FLAGS_KIND_REGULAR = 0x00` — an ordinary
+    /// `EXPORT_SYMBOL_FLAGS_KIND_REGULAR = 0x00` - an ordinary
     /// function or data symbol whose body lives at a VM address in
     /// this image. The vast majority of trie entries are this kind.
     Regular,
-    /// `EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE = 0x02` — an absolute
+    /// `EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE = 0x02` - an absolute
     /// constant (e.g. `mh_execute_header`'s sentinel value); the
     /// "address" is a literal symbol value, not a VM address.
     Absolute,
-    /// `EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL = 0x01` — a TLS
+    /// `EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL = 0x01` - a TLS
     /// variable; the address is a thread-local offset, accessed via
     /// `__thread_vars` on launch.
     ThreadLocal,
-    /// Unknown kind value — preserved for round-trip. Reserved for
+    /// Unknown kind value - preserved for round-trip. Reserved for
     /// future `EXPORT_SYMBOL_FLAGS_KIND_*` constants.
     Other(u64),
 }
@@ -91,7 +91,7 @@ pub enum ExportInfo<'p> {
         address: u64,
     },
     /// Re-export with `EXPORT_SYMBOL_FLAGS_REEXPORT` set in the
-    /// trie node — this image declares the symbol but forwards
+    /// trie node - this image declares the symbol but forwards
     /// resolution to another dylib. dyld follows the chain at load
     /// time.
     Reexport {
@@ -101,7 +101,7 @@ pub enum ExportInfo<'p> {
         lib: &'p str,
         /// Symbol name in the target dylib. `None` means "use this
         /// entry's own trie name", which the toolchain emits when
-        /// the re-exported name matches the original — saves bytes
+        /// the re-exported name matches the original - saves bytes
         /// in the trie.
         lib_symbol_name: Option<&'p str>,
     },

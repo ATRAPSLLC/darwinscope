@@ -1,8 +1,8 @@
 //! # darwinscope: Mach-O / Objective-C / Swift binary parser
 //!
-//! A Rust library for statically analyzing Mach-O binaries — the
+//! A Rust library for statically analyzing Mach-O binaries - the
 //! container format used by macOS, iOS, watchOS, tvOS, visionOS, and
-//! Mac Catalyst — and the rich Apple-runtime metadata they embed.
+//! Mac Catalyst - and the rich Apple-runtime metadata they embed.
 //!
 //! Given an arbitrary byte slice, `darwinscope` decodes:
 //!
@@ -22,10 +22,10 @@
 //!   (`__swift5_types`), protocol descriptors (`__swift5_protos`),
 //!   field descriptors (`__swift5_fieldmd`), protocol conformances
 //!   (`__swift5_proto`), and class vtable entries.
-//! - **CoreFoundation constant strings** (`__cfstring`) — both
+//! - **CoreFoundation constant strings** (`__cfstring`) - both
 //!   ASCII / UTF-8 (`__TEXT,__cstring`) and UTF-16 LE
 //!   (`__TEXT,__ustring`) bodies.
-//! - **Apple Blocks-runtime metadata** — bind sites for
+//! - **Apple Blocks-runtime metadata** - bind sites for
 //!   `_NSConcrete{Global,Stack}Block` plus the full
 //!   `Block_descriptor_{1,2,3}` decode for global block literals
 //!   (invoke pointer, signature, layout string).
@@ -40,15 +40,15 @@
 //! Apple binaries are unusually rich static-analysis targets.
 //! Stripped Mach-O dylibs and executables still carry:
 //!
-//! - **Obj-C class hierarchy + selectors** — required at runtime for
+//! - **Obj-C class hierarchy + selectors** - required at runtime for
 //!   message dispatch.
-//! - **Swift type names + field layouts** — required for runtime
+//! - **Swift type names + field layouts** - required for runtime
 //!   reflection, generic specialization, and protocol witness lookup.
-//! - **Code-signing identity** — Team ID and bundle identifier,
+//! - **Code-signing identity** - Team ID and bundle identifier,
 //!   embedded for system-wide code-signing enforcement.
-//! - **Entitlements XML** — explicit list of every privileged API
+//! - **Entitlements XML** - explicit list of every privileged API
 //!   the binary requested.
-//! - **Function entry points** — `LC_FUNCTION_STARTS` ULEB128 table,
+//! - **Function entry points** - `LC_FUNCTION_STARTS` ULEB128 table,
 //!   used by `dyld` for the unwinder.
 //!
 //! This metadata survives stripping because the OS depends on it for

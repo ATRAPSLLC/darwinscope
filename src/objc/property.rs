@@ -1,11 +1,11 @@
 //! Property-list walker.
 //!
 //! Cite: `objc4/runtime/objc-runtime-new.h:1227-1230` (`property_t`)
-//! and `:1496-1502` (`property_list_t` —
+//! and `:1496-1502` (`property_list_t` -
 //! `entsize_list_tt<property_t, property_list_t, 0>`).
 //! `RESEARCH.md` anchors the layout at line 1535.
 //!
-//! Each property is `(name, attributes)` — two 64-bit pointers — and
+//! Each property is `(name, attributes)` - two 64-bit pointers - and
 //! the attribute string is a comma-separated grammar like
 //! `T@"NSString",C,N,V_name`. The grammar is documented in Apple's
 //! runtime documentation (not the header itself); each comma-
@@ -24,7 +24,7 @@ const PROPERTY_ENTSIZE: u32 = 16;
 /// `protocol_t.instanceProperties` list (`property_t`).
 ///
 /// Cite: `objc4/runtime/objc-runtime-new.h:1227-1230`. Each entry is
-/// just two 64-bit pointers — `name` and `attributes` — both into
+/// just two 64-bit pointers - `name` and `attributes` - both into
 /// `__TEXT,__cstring`. The runtime never *uses* properties at
 /// dispatch time (Obj-C dispatch is selector-based); they exist
 /// purely for KVC / KVO, the runtime introspection API, and Swift's
@@ -54,7 +54,7 @@ impl<'a> Property<'a> {
         self.attributes
     }
 
-    /// Parsed attribute view — splits on commas into single-letter
+    /// Parsed attribute view - splits on commas into single-letter
     /// keys and per-key values.
     pub fn parsed(&self) -> ParsedAttributes<'a> {
         parse_attributes(self.attributes)
@@ -123,7 +123,7 @@ impl<'a, 'p> Iterator for PropertyIter<'a, 'p> {
             }
             #[cfg(feature = "tracing")]
             tracing::debug!(
-                "darwinscope::objc: property row at 0x{:x} (idx={}) skipped — decode failed",
+                "darwinscope::objc: property row at 0x{:x} (idx={}) skipped - decode failed",
                 entry_va,
                 i
             );
@@ -185,7 +185,7 @@ fn decode_property<'a>(rt: &ObjcRuntime<'a>, entry_va: u64) -> Option<Property<'
 ///
 /// Each comma-separated chunk has a single-character key followed
 /// by an optional payload. Quoted type strings (`T@"NSString"`) are
-/// left intact — the parser does *not* descend into the type
+/// left intact - the parser does *not* descend into the type
 /// grammar; it only segments by top-level commas. Quote-state is
 /// tracked so that a comma inside a `"..."` quoted region is not
 /// treated as a separator.
@@ -221,7 +221,7 @@ fn parse_attributes(s: &str) -> ParsedAttributes<'_> {
         // Bytes in `value_start..j` are the value. Slice on byte
         // indices is safe because the string is ASCII through that
         // segment (the only multi-byte content possible is inside
-        // quoted type encodings, which always start/end on `"` —
+        // quoted type encodings, which always start/end on `"` -
         // ASCII boundaries).
         let value = s.get(value_start..j).unwrap_or("");
         let item = ParsedAttribute { key, value };
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn parse_handles_quoted_commas() {
         // Type encoding for a property of type `NSDictionary<NSString*, NSNumber*>`
-        // (illustrative — real ObjC encodes generics differently, but
+        // (illustrative - real ObjC encodes generics differently, but
         // the parser must not split inside quotes regardless).
         let p = parse_attributes("T@\"NSDictionary<NSString,NSNumber>\",R,V_dict");
         assert_eq!(p.items.len(), 3);

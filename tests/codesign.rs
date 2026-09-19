@@ -2,13 +2,13 @@
 //!
 //! Three fixtures plus the `/usr/bin/codesign` smoke:
 //!
-//! - `hello-x86_64` — unsigned (cross-arch link from arm64 host
+//! - `hello-x86_64` - unsigned (cross-arch link from arm64 host
 //!   skips the auto-adhoc step). Pins the negative path.
-//! - `hello-adhoc` — `codesign -s -` produces CD + Requirements
+//! - `hello-adhoc` - `codesign -s -` produces CD + Requirements
 //!   + empty CMS placeholder. No entitlements.
-//! - `hello-entitled` — adhoc + entitlements XML and DER blobs
+//! - `hello-entitled` - adhoc + entitlements XML and DER blobs
 //!   matching the committed `ent.plist` source.
-//! - `/usr/bin/codesign` — opportunistic check that the
+//! - `/usr/bin/codesign` - opportunistic check that the
 //!   real-CMS / real-Requirements path also decodes.
 //!
 //! Snapshot tests in `tests/snapshots.rs` cover per-field values
@@ -206,7 +206,7 @@ fn exec_seg_fields_present_in_v20400_fixtures() {
 #[test]
 fn exec_seg_returns_none_for_legacy_versions() {
     // Hand-built CodeDirectory blob with version 0x20100 (no
-    // team_id, no exec_seg) — verify the gated accessors return
+    // team_id, no exec_seg) - verify the gated accessors return
     // None.
     let mut blob = vec![
         0xfa, 0xde, 0x0c, 0x02, // magic CSMAGIC_CODEDIRECTORY
@@ -464,8 +464,8 @@ fn hex_decode(s: &str) -> Vec<u8> {
     let bytes = s.as_bytes();
     assert!(bytes.len().is_multiple_of(2));
     let mut out = Vec::with_capacity(bytes.len() / 2);
-    for pair in bytes.chunks_exact(2) {
-        out.push((nybble(pair[0]) << 4) | nybble(pair[1]));
+    for &[hi, lo] in bytes.as_chunks::<2>().0 {
+        out.push((nybble(hi) << 4) | nybble(lo));
     }
     out
 }

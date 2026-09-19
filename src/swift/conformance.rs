@@ -1,6 +1,6 @@
 //! `__swift5_proto` walker.
 //!
-//! Decodes [`Conformance`] rows — one per
+//! Decodes [`Conformance`] rows - one per
 //! `TargetProtocolConformanceDescriptor` (per
 //! `swift/include/swift/ABI/Metadata.h:2837-2882` and
 //! `RESEARCH.md:1956-1974`). The single most attribution-bearing
@@ -11,7 +11,7 @@
 //!
 //! On-disk layout of the 16-byte header (each entry in the
 //! `__swift5_proto` array is an i32 relative pointer to one of
-//! these — *not* a flat array of structs):
+//! these - *not* a flat array of structs):
 //!
 //! | Off | Field                | Type                         |
 //! |-----|----------------------|------------------------------|
@@ -24,7 +24,7 @@
 //! conditional requirements, generic pack shapes, global-actor
 //! references) live past the header and are gated on the
 //! corresponding `ConformanceFlags` bits. v0.1 surfaces the *flag
-//! bits* — full structured decode of the trailing arrays is post-
+//! bits* - full structured decode of the trailing arrays is post-
 //! v0.1.
 
 use crate::{
@@ -39,7 +39,7 @@ use crate::{
 /// `TargetProtocolConformanceDescriptor.TypeRef`.
 ///
 /// The conformance descriptor's `TypeRef` slot is a polymorphic
-/// reference to the type that's conforming — the Swift compiler
+/// reference to the type that's conforming - the Swift compiler
 /// picks one of four encodings depending on whether the type is
 /// Swift or Obj-C and whether the descriptor needs an extra layer
 /// of indirection (for resilient classes, where the descriptor
@@ -53,23 +53,23 @@ use crate::{
 /// reserved (surfaced as [`Other`](Self::Other)).
 #[derive(Debug, Clone)]
 pub enum TypeReference<'a> {
-    /// `kind = 0` — Direct relative pointer to a Swift
+    /// `kind = 0` - Direct relative pointer to a Swift
     /// `TargetTypeContextDescriptor`. The most common case for
     /// resilient-internal Swift types. Carries the resolved VA of
     /// the descriptor base.
     DirectTypeDescriptor(u64),
-    /// `kind = 1` — Indirect relative pointer; the slot at the
+    /// `kind = 1` - Indirect relative pointer; the slot at the
     /// resolved VA contains a *pointer* to the
     /// `TargetTypeContextDescriptor`. Used for resilient-public
     /// types where the descriptor address may move across module
     /// versions. Carries the resolved VA of the indirection slot.
     IndirectTypeDescriptor(u64),
-    /// `kind = 2` — Direct relative pointer to a NUL-terminated
+    /// `kind = 2` - Direct relative pointer to a NUL-terminated
     /// Obj-C class name (a C-string in `__TEXT,__objc_classname`).
     /// Used when a Swift type conforms on behalf of an imported
     /// Obj-C class. Already resolved into the borrowed string.
     DirectObjCClassName(&'a str),
-    /// `kind = 3` — Indirect relative pointer to an Obj-C class
+    /// `kind = 3` - Indirect relative pointer to an Obj-C class
     /// object slot (`_OBJC_CLASS_$_<name>` inside `__DATA,__data`).
     /// Carries the resolved VA of the class-object slot.
     IndirectObjCClass(u64),
@@ -88,20 +88,20 @@ pub enum TypeReference<'a> {
 /// Cite: `swift/include/swift/ABI/Metadata.h:2837-2882`
 /// (`TargetProtocolConformanceDescriptor`).
 ///
-/// Each row binds a `(type, protocol, witness table)` triple — the
+/// Each row binds a `(type, protocol, witness table)` triple - the
 /// Swift runtime walks `__swift5_proto` at process start and
 /// registers each conformance into the global protocol-witness
 /// lookup, so casts of the form `value as? P` succeed for types
 /// declared in this image. The witness-table-pattern slot is the
 /// canonical witness table for non-generic conformances and a
 /// pattern (with placeholders the runtime fills in) for generic
-/// ones — gated on [`ConformanceFlags`].
+/// ones - gated on [`ConformanceFlags`].
 ///
 /// On-disk layout is the 16-byte header documented at the top of
 /// this module; trailing fields (resilient witnesses, conditional
 /// requirements, generic pack shapes, global-actor references) live
 /// past the header and are gated on the corresponding
-/// `ConformanceFlags` bits. v0.1 surfaces the flag bits — full
+/// `ConformanceFlags` bits. v0.1 surfaces the flag bits - full
 /// structured decode of the trailing arrays is post-v0.1.
 #[derive(Debug)]
 pub struct Conformance<'a, 'p> {

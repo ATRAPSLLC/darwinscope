@@ -50,11 +50,11 @@ use crate::{
 };
 
 /// Size of one `CFConstantString` quadruple (`isa`, `flags+pad`,
-/// `str`, `length` — 4 × 8 bytes).
+/// `str`, `length` - 4 × 8 bytes).
 const CFSTRING_STRIDE: usize = 32;
 
 /// Encoding selector mask isolating ASCII (`0x07c8`) vs UTF-16
-/// (`0x07d0`) — the bits CoreFoundation uses to discriminate the
+/// (`0x07d0`) - the bits CoreFoundation uses to discriminate the
 /// body width.
 ///
 /// Per `RESEARCH.md:2184`: bits beyond this selector are reserved by
@@ -71,11 +71,11 @@ const CFSTRING_FLAG_UTF16: u32 = 0x07d0;
 /// field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CFStringEncoding {
-    /// ASCII / UTF-8 body in `__TEXT,__cstring` — `flags & 0x07f8 == 0x07c8`.
+    /// ASCII / UTF-8 body in `__TEXT,__cstring` - `flags & 0x07f8 == 0x07c8`.
     Ascii,
-    /// UTF-16 LE body in `__TEXT,__ustring` — `flags & 0x07f8 == 0x07d0`.
+    /// UTF-16 LE body in `__TEXT,__ustring` - `flags & 0x07f8 == 0x07d0`.
     Utf16Le,
-    /// Anything else — value preserved for round-trip; we still
+    /// Anything else - value preserved for round-trip; we still
     /// surface the row so callers can audit unexpected encodings.
     Other(u32),
 }
@@ -121,11 +121,11 @@ pub struct CFString<'a> {
     pub flags: u32,
     /// Narrowed encoding selector, derived from `flags`.
     pub encoding: CFStringEncoding,
-    /// Canonical VM address of the body — `str` resolved through the
+    /// Canonical VM address of the body - `str` resolved through the
     /// chained-fixup rebases (or PAC-stripped for legacy binaries).
     /// Zero when the slot was empty.
     pub body_address: u64,
-    /// `length` field in characters — code points for UTF-16, bytes
+    /// `length` field in characters - code points for UTF-16, bytes
     /// for ASCII. **Not** byte count.
     pub length: u64,
     /// Decoded body, or [`CFStringBody::Unresolved`] when resolution
@@ -155,13 +155,13 @@ impl<'a> CFStringRuntime<'a> {
     /// Construct from a parent [`MachoBinary`].
     ///
     /// Returns `None` when the image is 32-bit (the v0.1 walker is
-    /// 64-bit only — the on-disk struct is 32 bytes wide and uses
+    /// 64-bit only - the on-disk struct is 32 bytes wide and uses
     /// 64-bit pointers) or when no `__cfstring` section is present.
     pub(crate) fn build(bin: &MachoBinary<'a>) -> Option<Self> {
         if !bin.header().is_64() {
             #[cfg(feature = "tracing")]
             tracing::debug!(
-                "darwinscope::cfstring: 32-bit Mach-O — CFString walker is 64-bit only"
+                "darwinscope::cfstring: 32-bit Mach-O - CFString walker is 64-bit only"
             );
             return None;
         }
@@ -258,8 +258,8 @@ impl<'a, 'p> Iterator for CFStringIter<'a, 'p> {
 
 /// Resolve a pointer slot to a canonical VM address.
 ///
-/// Mirrors [`ObjcRuntime::resolve_pointer`](crate::objc::ObjcRuntime)
-/// — the `str` slot of a `__cfstring` entry encodes the same
+/// Mirrors [`ObjcRuntime::resolve_pointer`](crate::objc::ObjcRuntime) -
+/// the `str` slot of a `__cfstring` entry encodes the same
 /// chain-format / PAC dance as Obj-C metadata pointers. For chained
 /// fixups the canonical target lives in
 /// [`Rebase::target_vmaddr`](crate::fixup::Rebase::target_vmaddr); for
@@ -274,7 +274,7 @@ fn resolve_pointer(rt: &CFStringRuntime<'_>, slot_va: u64, raw: u64) -> u64 {
 /// Decode the body bytes referenced by `body_address` according to
 /// `encoding` and `length`.
 ///
-/// `length` is in *characters* per the CF convention — bytes for
+/// `length` is in *characters* per the CF convention - bytes for
 /// ASCII, code units (`u16`) for UTF-16. Returns
 /// [`CFStringBody::Unresolved`] for any decode failure (segment
 /// lookup miss, truncated read, invalid UTF-8 / UTF-16 sequence).
@@ -375,7 +375,7 @@ mod tests {
             CFStringEncoding::Utf16Le
         );
         // Reserved high bits beyond the encoding selector are
-        // ignored — both of these still narrow to ASCII / UTF-16.
+        // ignored - both of these still narrow to ASCII / UTF-16.
         assert_eq!(
             CFStringEncoding::from_flags(0xffff_07c8),
             CFStringEncoding::Ascii

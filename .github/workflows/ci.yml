@@ -33,6 +33,20 @@ jobs:
           components: clippy
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
+  deny:
+    name: Supply chain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-deny
+      # `check bans` specifically, not a bare `cargo deny check`: deny.toml
+      # configures the bans section alone. Advisories, licences and sources run
+      # on defaults that this dependency graph has never been audited against,
+      # so enabling them here would fail the build for reasons unrelated to the
+      # compromised-release bans the file exists to hold.
+      - run: cargo deny check bans
+
   fmt:
     name: Format
     runs-on: ubuntu-latest

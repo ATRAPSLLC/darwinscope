@@ -67,7 +67,7 @@ fn parse_fat_data_view_is_slice_not_full_archive() {
     let bytes = read_fixture(FAT_PATH);
     let bin = MachoBinary::parse_with_arch(&bytes, CPU_TYPE_ARM64, CPU_SUBTYPE_ANY).unwrap();
     // The slice's `raw()` must equal a contiguous sub-range of the
-    // fat archive — never the full archive.
+    // fat archive - never the full archive.
     assert!(
         bin.raw().len() < bytes.len(),
         "fat slice shouldn't equal full archive"

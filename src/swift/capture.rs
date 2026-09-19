@@ -1,6 +1,6 @@
 //! `__swift5_capture` walker (lower priority).
 //!
-//! Decodes [`CaptureDescriptor`] entries — the per-closure capture
+//! Decodes [`CaptureDescriptor`] entries - the per-closure capture
 //! layouts the runtime needs to enumerate captured values. Cite:
 //! `swift/include/swift/RemoteInspection/Records.h` (search
 //! `CaptureDescriptor`).
@@ -20,21 +20,21 @@
 //!
 //! v0.1 surfaces the header (count of capture types, metadata
 //! sources, bindings) plus the descriptor's VA. Per-binding
-//! decoding is post-v0.1 — bindings vary by kind and require
+//! decoding is post-v0.1 - bindings vary by kind and require
 //! extending the runtime's metadata-source machinery, which is
 //! outside the v0.1 scope.
 
 use crate::{swift::SwiftRuntime, util::read_u32_le_at};
 
-/// Header size (bytes) — `(NumCaptureTypes, NumMetadataSources,
+/// Header size (bytes) - `(NumCaptureTypes, NumMetadataSources,
 /// NumBindings)`.
 const CAPTURE_HEADER_SIZE: u64 = 12;
 
-/// Per-record size for `CaptureTypeRecord` (4 bytes — single
+/// Per-record size for `CaptureTypeRecord` (4 bytes - single
 /// i32-relative pointer to the captured type's mangled name).
 const CAPTURE_TYPE_RECORD_SIZE: u64 = 4;
 
-/// Per-record size for `MetadataSourceRecord` (8 bytes — two
+/// Per-record size for `MetadataSourceRecord` (8 bytes - two
 /// i32-relative pointers).
 const METADATA_SOURCE_RECORD_SIZE: u64 = 8;
 
@@ -43,11 +43,11 @@ const METADATA_SOURCE_RECORD_SIZE: u64 = 8;
 pub struct CaptureDescriptor {
     /// VA of the descriptor header inside `__swift5_capture`.
     pub address: u64,
-    /// `NumCaptureTypes` — captured-type count.
+    /// `NumCaptureTypes` - captured-type count.
     pub num_capture_types: u32,
-    /// `NumMetadataSources` — count of `MetadataSourceRecord` entries.
+    /// `NumMetadataSources` - count of `MetadataSourceRecord` entries.
     pub num_metadata_sources: u32,
-    /// `NumBindings` — count of generic-binding entries (per-binding
+    /// `NumBindings` - count of generic-binding entries (per-binding
     /// structure decoded post-v0.1).
     pub num_bindings: u32,
 }
@@ -105,7 +105,7 @@ impl<'a, 'p> Iterator for CaptureIter<'a, 'p> {
 
         // Compute the (lower-bound) descriptor end. Bindings are
         // omitted from this calculation because their per-entry
-        // size depends on the binding kind — failing to size
+        // size depends on the binding kind - failing to size
         // them correctly would mis-align the next descriptor's
         // header, but for v0.1 we're conservative: stop after
         // metadata sources. If bindings are non-zero AND there
@@ -124,7 +124,7 @@ impl<'a, 'p> Iterator for CaptureIter<'a, 'p> {
         let descriptor_va = section.vmaddr.wrapping_add(start_off as u64);
 
         self.cursor = if num_bindings != 0 {
-            // Bindings of unknown size — stop after this row.
+            // Bindings of unknown size - stop after this row.
             section.body.len()
         } else if next_off > section.body.len() {
             section.body.len()

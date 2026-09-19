@@ -1,0 +1,21 @@
+# cargo-deny configuration. Run with `cargo deny check bans`.
+#
+# Scoped deliberately narrowly: this file exists to hold supply-chain bans on
+# specific compromised releases, not to gate licences or advisories. Those
+# checks can be enabled later once the current graph has been audited against
+# them; turning them on blind would fail the build for reasons unrelated to the
+# bans below.
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+
+# Supply-chain: `arrayref` 0.3.10 was published as part of an ongoing attack on
+# crates.io. Nothing here depends on it: `blake3` pulled it in transitively up to
+# 1.8.6 and dropped it in 1.8.7, so the current graph is clean. The ban stays so
+# that a future transitive dependency cannot pull the compromised release back in
+# silently. The range is open-ended rather than
+# `=0.3.10` because the publishing account is compromised, so any *later* version
+# is equally untrusted until ownership is confirmed recovered. Revisit then.
+[[bans.deny]]
+crate = "arrayref:>=0.3.10"

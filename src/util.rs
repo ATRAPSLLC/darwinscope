@@ -1,4 +1,4 @@
-//! Shared low-level helpers — ULEB128 / SLEB128 decoding,
+//! Shared low-level helpers - ULEB128 / SLEB128 decoding,
 //! virtual-to-file-offset translation, primitive byte readers.
 //!
 //! Used by every higher-level walker. Consumers of `darwinscope`
@@ -20,7 +20,7 @@
 /// last consumed byte is the first one with the high bit clear, per
 /// the standard ULEB128 framing.
 ///
-/// On 64-bit overflow we deliberately fail instead of saturating —
+/// On 64-bit overflow we deliberately fail instead of saturating -
 /// real Mach-O ULEB128 streams (function starts, bind opcodes,
 /// export trie offsets) are always small enough to fit in `u64`,
 /// and a value past that range is by definition malformed.
@@ -32,7 +32,7 @@ pub fn read_uleb128(bytes: &[u8]) -> Option<(u64, usize)> {
         consumed = consumed.checked_add(1)?;
         let payload = (byte & 0x7f) as u64;
         if shift >= 64 {
-            // Already at the limit — only zero payload + terminating
+            // Already at the limit - only zero payload + terminating
             // bit is acceptable. Anything else overflows u64.
             if payload != 0 || (byte & 0x80) != 0 {
                 return None;
@@ -61,7 +61,7 @@ pub fn read_sleb128(bytes: &[u8]) -> Option<(i64, usize)> {
         consumed = consumed.checked_add(1)?;
         let payload = (byte & 0x7f) as i64;
         if shift >= 64 {
-            // Past the width — only the natural sign-extension
+            // Past the width - only the natural sign-extension
             // continuation is valid (all-zero or all-one trailers).
             if (byte & 0x80) != 0 {
                 return None;
@@ -133,7 +133,7 @@ pub fn read_u64_le_at(data: &[u8], off: usize) -> Option<u64> {
 /// Read a little-endian `i32` at byte offset `off` in `data`.
 ///
 /// Returns `None` if `off + 4` overruns `data`. Used by the ObjC and
-/// Swift relative-pointer decoders — `RelativePointer<T>` and
+/// Swift relative-pointer decoders - `RelativePointer<T>` and
 /// `small_method_t` slots are signed 32-bit offsets from the address
 /// of the offset itself.
 pub fn read_i32_le_at(data: &[u8], off: usize) -> Option<i32> {
@@ -146,14 +146,14 @@ pub fn read_i32_le_at(data: &[u8], off: usize) -> Option<i32> {
 /// Resolve an Apple-style 32-bit signed relative pointer.
 ///
 /// `base_va` is the VM address of the offset slot itself (i.e. the
-/// address `&offset` points at). Returns `base_va + sext(offset)` —
+/// address `&offset` points at). Returns `base_va + sext(offset)` -
 /// the absolute VM address the relative pointer references.
 ///
 /// Cite: `objc4/runtime/objc-runtime-new.h:643-665` (`RelativePointer`),
 /// `swift/include/swift/ABI/Metadata.h` (`TargetRelativeDirectPointer`).
 ///
 /// `wrapping_add` on the sign-extended `i64` is the correct
-/// arithmetic — negative offsets jump backward inside the same
+/// arithmetic - negative offsets jump backward inside the same
 /// segment, and the wrap is well-defined for any 64-bit VM address.
 pub fn relative_pointer(base_va: u64, offset: i32) -> u64 {
     base_va.wrapping_add(offset as i64 as u64)
@@ -164,9 +164,9 @@ pub fn relative_pointer(base_va: u64, offset: i32) -> u64 {
 ///
 /// Returns `None` if `off` is past `data` or the string is not valid
 /// UTF-8. The returned `&str` borrows from `data` and stops at the
-/// first NUL — the NUL itself is *not* included.
+/// first NUL - the NUL itself is *not* included.
 ///
-/// Used everywhere ObjC stores strings — class names, method
+/// Used everywhere ObjC stores strings - class names, method
 /// selectors, type encodings, ivar names, property names, property
 /// attribute strings.
 pub fn read_cstr_at(data: &[u8], off: usize) -> Option<&str> {
@@ -183,7 +183,7 @@ pub fn read_cstr_at(data: &[u8], off: usize) -> Option<&str> {
 /// fixed-width 16-byte NUL-padded ASCII buffers
 /// (`load_commands.h`'s `segment_command_64.segname`,
 /// `section_64.segname` / `section_64.sectname`). Returns `""` when
-/// the slice up to the first NUL is not valid UTF-8 — the spec
+/// the slice up to the first NUL is not valid UTF-8 - the spec
 /// constrains these fields to ASCII, so this only fires on
 /// adversarial input.
 ///
@@ -202,7 +202,7 @@ pub fn cstr_from_fixed<const N: usize>(bytes: &[u8; N]) -> &str {
 ///
 /// Returns `None` if `off + 4` overruns `data`. Code-signing
 /// structures (`CS_SuperBlob`, `CS_BlobIndex`, `CS_CodeDirectory`)
-/// are big-endian on disk in contrast to the rest of Mach-O — see
+/// are big-endian on disk in contrast to the rest of Mach-O - see
 /// `RESEARCH.md` §"Code signing / Endianness" (line 991) and
 /// `xnu/bsd/kern/ubc_subr.c`'s `ntohl` reads.
 pub fn read_u32_be_at(data: &[u8], off: usize) -> Option<u32> {
@@ -389,7 +389,7 @@ mod tests {
         let buf = b"hello\0world\0\xff";
         assert_eq!(read_cstr_at(buf, 0), Some("hello"));
         assert_eq!(read_cstr_at(buf, 6), Some("world"));
-        // No NUL at the end of the slice — stops at the slice tail.
+        // No NUL at the end of the slice - stops at the slice tail.
         assert_eq!(read_cstr_at(buf, 12), None); // invalid UTF-8 (0xff)
         assert_eq!(read_cstr_at(buf, 99), None);
     }
@@ -410,7 +410,7 @@ mod tests {
     #[test]
     fn cstr_from_fixed_full_window_no_nul() {
         // 16-byte buffer fully populated (no terminating NUL inside the
-        // window) — Mach-O's `segname` field allows this exact case for
+        // window) - Mach-O's `segname` field allows this exact case for
         // names that are exactly 16 bytes long.
         let buf = *b"__DATA_CONSTAAAA";
         assert_eq!(cstr_from_fixed(&buf), "__DATA_CONSTAAAA");

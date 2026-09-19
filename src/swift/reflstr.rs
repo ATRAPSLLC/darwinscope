@@ -3,12 +3,12 @@
 //! `__swift5_reflstr` is a pool of NUL-terminated UTF-8 strings
 //! referenced by relative pointers from
 //! [`crate::swift::FieldRecord::field_name`]. The walker resolves
-//! field names through this section transparently — no separate
+//! field names through this section transparently - no separate
 //! iterator is exposed.
 //!
 //! Resolution strategy:
 //!
-//! 1. Primary: [`SwiftRuntime::read_cstr`] — segment-table-based
+//! 1. Primary: [`SwiftRuntime::read_cstr`] - segment-table-based
 //!    lookup. Works for any in-image VA, including names that live
 //!    inside `__TEXT,__swift5_reflstr` directly.
 //! 2. Fallback: if the primary lookup fails, locate the target VA

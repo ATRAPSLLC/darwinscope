@@ -1,11 +1,11 @@
-//! Imports — dyld bind targets.
+//! Imports - dyld bind targets.
 //!
 //! Decodes both binding encodings the toolchain emits:
 //!
 //! - **Legacy** `LC_DYLD_INFO` / `LC_DYLD_INFO_ONLY` bind-opcode
 //!   stream (via goblin).
 //! - **Chained fixups** (`LC_DYLD_CHAINED_FIXUPS`, now the default
-//!   on iOS / macOS) — decoded in [`crate::fixup`] and folded in
+//!   on iOS / macOS) - decoded in [`crate::fixup`] and folded in
 //!   here.
 //!
 //! ## Merge order
@@ -13,7 +13,7 @@
 //! The combined iterator yields **legacy bind rows first, then
 //! chained-bind rows**, in load-command order. Real binaries ship
 //! exactly one of the two encodings (never both), so de-duplication
-//! is unnecessary — the order matters only as a documented
+//! is unnecessary - the order matters only as a documented
 //! invariant for consumers, not as a meaningful sort.
 //!
 //! ## Lifetime
@@ -40,7 +40,7 @@
 ///   `dyld/include/mach-o/fixup-chains.h`'s `dyld_chained_import*`
 ///   structs). See [`crate::fixup::Bind`] for the chained-form view.
 ///
-/// Both forms are normalised into this single shape — consumers do
+/// Both forms are normalised into this single shape - consumers do
 /// not need to know which encoding the binary used.
 #[derive(Debug, Clone)]
 pub struct Import<'p> {
@@ -49,7 +49,7 @@ pub struct Import<'p> {
     /// bytes.
     pub name: &'p str,
     /// `LC_LOAD_*_DYLIB` install-name path the symbol resolves into.
-    /// Two-level lookup — dyld will not search other dylibs.
+    /// Two-level lookup - dyld will not search other dylibs.
     pub dylib: &'p str,
     /// Whether resolution is deferred until first use
     /// (`BIND_OPCODE_DO_BIND_ULEB_TIMES_LAZY` / lazy bind table).
@@ -63,7 +63,7 @@ pub struct Import<'p> {
     /// File offset of the slot to bind. `0` for slots that have no
     /// on-disk backing (BSS / non-lazy in zerofill segments).
     pub offset: u64,
-    /// Slot size in bytes — `8` for ordinary 64-bit lazy / non-lazy
+    /// Slot size in bytes - `8` for ordinary 64-bit lazy / non-lazy
     /// pointers, `0` for rebase-only entries that the legacy decoder
     /// emits without a typed size.
     pub size: usize,

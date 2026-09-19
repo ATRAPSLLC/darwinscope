@@ -3,15 +3,15 @@
 //! ObjC images carry four reference sections that each hold an
 //! array of 64-bit pointer slots:
 //!
-//! - `__objc_selrefs` — selectors referenced at runtime. Each slot
+//! - `__objc_selrefs` - selectors referenced at runtime. Each slot
 //!   resolves (after PAC strip) to a NUL-terminated UTF-8 string in
 //!   `__TEXT,__objc_methname`.
-//! - `__objc_classrefs` — class references (e.g. `[NSObject foo]`).
+//! - `__objc_classrefs` - class references (e.g. `[NSObject foo]`).
 //!   Resolves to a `class_t` in this image, or to a chained-fixup
 //!   bind for foreign classes (`_OBJC_CLASS_$_<name>`).
-//! - `__objc_superrefs` — super-class references for messaging
+//! - `__objc_superrefs` - super-class references for messaging
 //!   patterns; same resolution semantics as `__objc_classrefs`.
-//! - `__objc_protorefs` — protocol references (i.e. `@protocol(X)`).
+//! - `__objc_protorefs` - protocol references (i.e. `@protocol(X)`).
 //!   Resolves to a `protocol_t` in this image, or to a chained-fixup
 //!   bind for foreign protocols (`_OBJC_PROTOCOL_$_<name>` /
 //!   `_OBJC_LABEL_PROTOCOL_$_<name>`).
@@ -30,7 +30,7 @@ pub enum RefTarget<'a> {
         /// VM address of the target struct (`class_t` /
         /// `protocol_t`).
         address: u64,
-        /// Best-effort name — `Some` when the target struct's name
+        /// Best-effort name - `Some` when the target struct's name
         /// pointer resolves; `None` for opaque locals.
         name: Option<&'a str>,
     },
@@ -54,7 +54,7 @@ pub enum RefTarget<'a> {
     },
 }
 
-/// Iterator over `__objc_selrefs` — yields each referenced
+/// Iterator over `__objc_selrefs` - yields each referenced
 /// selector C-string in slot order.
 pub struct SelRefIter<'a, 'p> {
     rt: &'p ObjcRuntime<'a>,
@@ -93,7 +93,7 @@ impl<'a, 'p> Iterator for SelRefIter<'a, 'p> {
     }
 }
 
-/// Internal helper macro builder — generate the three pointer-set
+/// Internal helper macro builder - generate the three pointer-set
 /// iterators (`__objc_classrefs`, `__objc_superrefs`,
 /// `__objc_protorefs`) which only differ in the section they read
 /// from and how an in-image target is resolved (class vs protocol
@@ -121,7 +121,7 @@ fn next_ref_target<'a>(
                 name: Some(name),
             });
         }
-        // Local target VA exists but name resolution failed — return
+        // Local target VA exists but name resolution failed - return
         // it as Local-with-no-name rather than falling through to
         // external (we know it's in this image because the VA is
         // non-zero and not a bind site).

@@ -3,12 +3,12 @@
 //! Walks the embedded `LC_CODE_SIGNATURE` payload (a `CS_SuperBlob`)
 //! into typed views over its component blobs:
 //!
-//! - [`Signature`] — the SuperBlob walker entry point.
-//! - [`BlobIndex`] / [`Slot`] — per-slot dispatch.
-//! - [`CodeDirectory`] — the primary CD plus alternates.
-//! - [`Entitlements`], [`DerEntitlements`] — XML and DER plists.
-//! - [`Requirements`] — opaque pass-through.
-//! - [`CmsSignature`] — embedded CMS size + presence.
+//! - [`Signature`] - the SuperBlob walker entry point.
+//! - [`BlobIndex`] / [`Slot`] - per-slot dispatch.
+//! - [`CodeDirectory`] - the primary CD plus alternates.
+//! - [`Entitlements`], [`DerEntitlements`] - XML and DER plists.
+//! - [`Requirements`] - opaque pass-through.
+//! - [`CmsSignature`] - embedded CMS size + presence.
 //!
 //! ## Endianness
 //!
@@ -20,7 +20,7 @@
 //!
 //! ## Lifetime model
 //!
-//! [`Signature<'a>`] borrows the binary's data slice (`'a`) — every
+//! [`Signature<'a>`] borrows the binary's data slice (`'a`) - every
 //! blob view (entitlements XML, identifier strings, hash bytes) is
 //! a zero-copy reborrow of the same slice.
 //!
@@ -33,25 +33,25 @@ use sha2::{Digest, Sha256, Sha384, Sha512};
 
 use crate::util::{read_cstr_at, read_u32_be_at, read_u64_be_at};
 
-/// `CSMAGIC_EMBEDDED_SIGNATURE` — entry point of an embedded
+/// `CSMAGIC_EMBEDDED_SIGNATURE` - entry point of an embedded
 /// SuperBlob (cite: `cs_blobs.h:95`).
 pub const CSMAGIC_EMBEDDED_SIGNATURE: u32 = 0xfade_0cc0;
-/// `CSMAGIC_EMBEDDED_SIGNATURE_OLD` — legacy embedded form.
+/// `CSMAGIC_EMBEDDED_SIGNATURE_OLD` - legacy embedded form.
 pub const CSMAGIC_EMBEDDED_SIGNATURE_OLD: u32 = 0xfade_0b02;
 /// `CSMAGIC_CODEDIRECTORY` (cite: `cs_blobs.h:94`).
 pub const CSMAGIC_CODEDIRECTORY: u32 = 0xfade_0c02;
 /// `CSMAGIC_REQUIREMENT` (cite: `cs_blobs.h:92`).
 pub const CSMAGIC_REQUIREMENT: u32 = 0xfade_0c00;
-/// `CSMAGIC_REQUIREMENTS` — vector of requirements
+/// `CSMAGIC_REQUIREMENTS` - vector of requirements
 /// (cite: `cs_blobs.h:93`).
 pub const CSMAGIC_REQUIREMENTS: u32 = 0xfade_0c01;
-/// `CSMAGIC_EMBEDDED_ENTITLEMENTS` — XML plist
+/// `CSMAGIC_EMBEDDED_ENTITLEMENTS` - XML plist
 /// (cite: `cs_blobs.h:97`).
 pub const CSMAGIC_EMBEDDED_ENTITLEMENTS: u32 = 0xfade_7171;
-/// `CSMAGIC_EMBEDDED_DER_ENTITLEMENTS` — DER plist
+/// `CSMAGIC_EMBEDDED_DER_ENTITLEMENTS` - DER plist
 /// (cite: `cs_blobs.h:98`).
 pub const CSMAGIC_EMBEDDED_DER_ENTITLEMENTS: u32 = 0xfade_7172;
-/// `CSMAGIC_BLOBWRAPPER` — CMS signature wrapper
+/// `CSMAGIC_BLOBWRAPPER` - CMS signature wrapper
 /// (cite: `cs_blobs.h:100`).
 pub const CSMAGIC_BLOBWRAPPER: u32 = 0xfade_0b01;
 
@@ -67,8 +67,8 @@ const BLOB_INDEX_SIZE: usize = 8;
 /// Slot kind from `CS_BlobIndex.type` (cite: `cs_blobs.h:110-128`).
 ///
 /// Each entry of a SuperBlob's index array tags its blob with one of
-/// these slot numbers. Slot indices `0..=11` identify *special* slots
-/// — blobs with a fixed purpose whose CD hash sits in the negative
+/// these slot numbers. Slot indices `0..=11` identify *special* slots -
+/// blobs with a fixed purpose whose CD hash sits in the negative
 /// indices of the CodeDirectory hash table. Slot indices in
 /// `0x1000..=0x1004` are *alternate* CodeDirectories (used to ship
 /// multiple hash algorithms in the same binary). Slots `≥ 0x10000`
@@ -78,44 +78,44 @@ const BLOB_INDEX_SIZE: usize = 8;
 /// raw `u32`s. Unknown values are surfaced as [`Slot::Other`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Slot {
-    /// `CSSLOT_CODEDIRECTORY = 0` — the canonical CodeDirectory the
+    /// `CSSLOT_CODEDIRECTORY = 0` - the canonical CodeDirectory the
     /// kernel hashes for the CDHash. The "primary" CD when only one
     /// hash algorithm is present.
     CodeDirectory,
-    /// `CSSLOT_INFOSLOT = 1` — SHA digest of the bundle's
+    /// `CSSLOT_INFOSLOT = 1` - SHA digest of the bundle's
     /// `Info.plist`, used by Gatekeeper to detect plist tampering on
     /// `.app` bundles.
     InfoSlot,
-    /// `CSSLOT_REQUIREMENTS = 2` — the internal "designated
+    /// `CSSLOT_REQUIREMENTS = 2` - the internal "designated
     /// requirement" vector, encoded as a [`Requirements`]
     /// (`CSMAGIC_REQUIREMENTS`) blob.
     Requirements,
-    /// `CSSLOT_RESOURCEDIR = 3` — SHA digest of
+    /// `CSSLOT_RESOURCEDIR = 3` - SHA digest of
     /// `_CodeSignature/CodeResources` (the per-resource hash list
     /// for bundle resources).
     ResourceDir,
-    /// `CSSLOT_APPLICATION = 4` — application-specific slot reserved
+    /// `CSSLOT_APPLICATION = 4` - application-specific slot reserved
     /// for the signer; rarely populated by Apple toolchains.
     Application,
-    /// `CSSLOT_ENTITLEMENTS = 5` — XML plist of the entitlements the
+    /// `CSSLOT_ENTITLEMENTS = 5` - XML plist of the entitlements the
     /// binary requested. See [`Entitlements`].
     Entitlements,
-    /// `CSSLOT_DER_ENTITLEMENTS = 7` — Apple's DER-encoded
+    /// `CSSLOT_DER_ENTITLEMENTS = 7` - Apple's DER-encoded
     /// entitlement plist. Required for hardened-runtime / iOS code
     /// signatures since macOS 11 / iOS 14. See [`DerEntitlements`].
     DerEntitlements,
-    /// `CSSLOT_LAUNCH_CONSTRAINT_SELF = 8` — declarative constraints
+    /// `CSSLOT_LAUNCH_CONSTRAINT_SELF = 8` - declarative constraints
     /// the kernel enforces on *this* binary at launch (introduced
     /// macOS 13 / iOS 16, `LWCRBlob`).
     LaunchConstraintSelf,
-    /// `CSSLOT_LAUNCH_CONSTRAINT_PARENT = 9` — constraints the
+    /// `CSSLOT_LAUNCH_CONSTRAINT_PARENT = 9` - constraints the
     /// kernel enforces on the *parent* process at launch.
     LaunchConstraintParent,
-    /// `CSSLOT_LAUNCH_CONSTRAINT_RESPONSIBLE = 10` — constraints on
+    /// `CSSLOT_LAUNCH_CONSTRAINT_RESPONSIBLE = 10` - constraints on
     /// the *responsible* process (the one Privacy & Security reports
     /// the launch under).
     LaunchConstraintResponsible,
-    /// `CSSLOT_LIBRARY_CONSTRAINT = 11` — constraints applied when
+    /// `CSSLOT_LIBRARY_CONSTRAINT = 11` - constraints applied when
     /// this binary is loaded *as a library* (dlopen / linkage).
     LibraryConstraint,
     /// `CSSLOT_ALTERNATE_CODEDIRECTORIES + i` (range
@@ -124,14 +124,14 @@ pub enum Slot {
     /// signature to satisfy multiple OS versions. The inner `u32` is
     /// the index `i`.
     AlternateCodeDirectory(u32),
-    /// `CSSLOT_SIGNATURESLOT = 0x10000` — the CMS / PKCS#7
+    /// `CSSLOT_SIGNATURESLOT = 0x10000` - the CMS / PKCS#7
     /// SignedData wrapper (`CSMAGIC_BLOBWRAPPER`). See
     /// [`CmsSignature`].
     SignatureSlot,
-    /// `CSSLOT_IDENTIFICATIONSLOT = 0x10001` — provisioning-style
+    /// `CSSLOT_IDENTIFICATIONSLOT = 0x10001` - provisioning-style
     /// identification blob; used by some validation paths.
     IdentificationSlot,
-    /// `CSSLOT_TICKETSLOT = 0x10002` — notarization stapled ticket
+    /// `CSSLOT_TICKETSLOT = 0x10002` - notarization stapled ticket
     /// (the response from Apple's notary service).
     TicketSlot,
     /// Any other slot value, surfaced verbatim. Reserved for forward
@@ -170,7 +170,7 @@ impl Slot {
     }
 }
 
-/// One entry of the SuperBlob's index array — a `(slot, offset)`
+/// One entry of the SuperBlob's index array - a `(slot, offset)`
 /// pair pointing at a typed blob within the SuperBlob payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BlobIndex {
@@ -239,17 +239,17 @@ impl<'a> Signature<'a> {
         })
     }
 
-    /// `CS_SuperBlob.magic` — `0xfade0cc0` for embedded signatures.
+    /// `CS_SuperBlob.magic` - `0xfade0cc0` for embedded signatures.
     pub fn magic(&self) -> u32 {
         self.magic
     }
 
-    /// `CS_SuperBlob.length` — total SuperBlob length in bytes.
+    /// `CS_SuperBlob.length` - total SuperBlob length in bytes.
     pub fn length(&self) -> u32 {
         self.length
     }
 
-    /// `CS_SuperBlob.count` — number of index entries.
+    /// `CS_SuperBlob.count` - number of index entries.
     pub fn blob_count(&self) -> u32 {
         self.count
     }
@@ -311,15 +311,15 @@ bitflags! {
     /// round-trip via `from_bits_retain`.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct CdFlags: u32 {
-        /// `CS_VALID = 0x1` — dynamically valid (set by kernel).
+        /// `CS_VALID = 0x1` - dynamically valid (set by kernel).
         const VALID = 0x1;
-        /// `CS_ADHOC = 0x2` — adhoc-signed (no real CMS).
+        /// `CS_ADHOC = 0x2` - adhoc-signed (no real CMS).
         const ADHOC = 0x2;
-        /// `CS_GET_TASK_ALLOW = 0x4` — `task_for_pid` allowed.
+        /// `CS_GET_TASK_ALLOW = 0x4` - `task_for_pid` allowed.
         const GET_TASK_ALLOW = 0x4;
         /// `CS_INSTALLER = 0x8`.
         const INSTALLER = 0x8;
-        /// `CS_FORCED_LV = 0x10` — library validation forced.
+        /// `CS_FORCED_LV = 0x10` - library validation forced.
         const FORCED_LV = 0x10;
         /// `CS_INVALID_ALLOWED = 0x20`.
         const INVALID_ALLOWED = 0x20;
@@ -333,27 +333,27 @@ bitflags! {
         const RESTRICT = 0x800;
         /// `CS_ENFORCEMENT = 0x1000`.
         const ENFORCEMENT = 0x1000;
-        /// `CS_REQUIRE_LV = 0x2000` — library validation required.
+        /// `CS_REQUIRE_LV = 0x2000` - library validation required.
         const REQUIRE_LV = 0x2000;
         /// `CS_ENTITLEMENTS_VALIDATED = 0x4000`.
         const ENTITLEMENTS_VALIDATED = 0x4000;
         /// `CS_NVRAM_UNRESTRICTED = 0x8000`.
         const NVRAM_UNRESTRICTED = 0x8000;
-        /// `CS_RUNTIME = 0x10000` — hardened runtime.
+        /// `CS_RUNTIME = 0x10000` - hardened runtime.
         const RUNTIME = 0x10000;
-        /// `CS_LINKER_SIGNED = 0x20000` — auto-applied by ld(1).
+        /// `CS_LINKER_SIGNED = 0x20000` - auto-applied by ld(1).
         const LINKER_SIGNED = 0x20000;
     }
 }
 
-/// `CS_CodeDirectory.hashType` — selects the digest algorithm
+/// `CS_CodeDirectory.hashType` - selects the digest algorithm
 /// used for the CD's hash slots and the CDHash itself
 /// (cite: `cs_blobs.h:182-187`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HashType {
     /// SHA-1 (legacy; `kSecCodeSignatureHashSHA1 = 1`).
     Sha1,
-    /// SHA-256 (`kSecCodeSignatureHashSHA256 = 2`) — modern default.
+    /// SHA-256 (`kSecCodeSignatureHashSHA256 = 2`) - modern default.
     Sha256,
     /// SHA-256 truncated to 20 bytes (`= 3`).
     Sha256Truncated,
@@ -487,7 +487,7 @@ impl<'a> CodeDirectory<'a> {
         })
     }
 
-    /// `CS_CodeDirectory.version` — encodes which trailing fields
+    /// `CS_CodeDirectory.version` - encodes which trailing fields
     /// are present (≥ `0x20100` ⇒ `scatterOffset`, ≥ `0x20200`
     /// ⇒ `teamOffset`, ≥ `0x20400` ⇒ `execSeg*`).
     pub fn version(&self) -> u32 {
@@ -510,7 +510,7 @@ impl<'a> CodeDirectory<'a> {
         HashType::from_raw(self.hash_type_raw)
     }
 
-    /// `hashSize` — bytes per hash slot.
+    /// `hashSize` - bytes per hash slot.
     pub fn hash_size(&self) -> u8 {
         self.hash_size
     }
@@ -525,26 +525,26 @@ impl<'a> CodeDirectory<'a> {
         }
     }
 
-    /// `nSpecialSlots` — number of negative-index hash slots
+    /// `nSpecialSlots` - number of negative-index hash slots
     /// preceding slot 0 (Info.plist, Requirements, ResourceDir,
     /// Application, Entitlements, DerEntitlements).
     pub fn n_special_slots(&self) -> u32 {
         self.n_special_slots
     }
 
-    /// `nCodeSlots` — number of ordinary page hashes following
+    /// `nCodeSlots` - number of ordinary page hashes following
     /// slot 0.
     pub fn n_code_slots(&self) -> u32 {
         self.n_code_slots
     }
 
-    /// `codeLimit` — byte length of the image region covered by
+    /// `codeLimit` - byte length of the image region covered by
     /// the code hashes.
     pub fn code_limit(&self) -> u32 {
         self.code_limit
     }
 
-    /// `platform` — platform identifier; `0` for non-platform
+    /// `platform` - platform identifier; `0` for non-platform
     /// binaries.
     pub fn platform(&self) -> u8 {
         self.platform
@@ -553,8 +553,8 @@ impl<'a> CodeDirectory<'a> {
     /// Identifier string (`identOffset`-relative), if present and
     /// valid UTF-8.
     ///
-    /// Returns `None` when `ident_offset` is `0` — the `cs_blobs.h`
-    /// convention for an absent identifier — or when the offset is
+    /// Returns `None` when `ident_offset` is `0` - the `cs_blobs.h`
+    /// convention for an absent identifier - or when the offset is
     /// out of bounds or the string is not valid UTF-8.
     pub fn identifier(&self) -> Option<&'a str> {
         if self.ident_offset == 0 {
@@ -573,7 +573,7 @@ impl<'a> CodeDirectory<'a> {
         read_cstr_at(self.blob, self.team_offset as usize)
     }
 
-    /// CDHash — full digest of the canonical CD blob bytes,
+    /// CDHash - full digest of the canonical CD blob bytes,
     /// computed using [`hash_type`](Self::hash_type).
     ///
     /// Returns an empty `Vec` for hash types `darwinscope` does
@@ -588,13 +588,13 @@ impl<'a> CodeDirectory<'a> {
         }
     }
 
-    /// CDHash truncated to the first 20 bytes — the form AMFI
+    /// CDHash truncated to the first 20 bytes - the form AMFI
     /// compares against. Zero-padded if the underlying digest is
     /// shorter than 20 bytes (only possible for unimplemented hash
     /// types, where the source digest is empty).
     ///
     /// Computes the digest directly into the 20-byte output buffer
-    /// rather than going through [`cd_hash`](Self::cd_hash) — avoids
+    /// rather than going through [`cd_hash`](Self::cd_hash) - avoids
     /// a heap allocation for the full digest just to copy 20 bytes
     /// out. AMFI invokes this once per binary at load time, so the
     /// allocation savings matter when batch-scanning a filesystem.
@@ -612,14 +612,14 @@ impl<'a> CodeDirectory<'a> {
     }
 
     /// The canonical CD blob bytes (`magic` through trailing hash
-    /// slots) — i.e. the input that hashes to CDHash. Useful for
+    /// slots) - i.e. the input that hashes to CDHash. Useful for
     /// callers that want to compute the hash with their own
     /// algorithm (e.g. SHA-1, which `darwinscope` does not bundle).
     pub fn blob_bytes(&self) -> &'a [u8] {
         self.blob
     }
 
-    /// `codeLimit64` — present only in CDs of version
+    /// `codeLimit64` - present only in CDs of version
     /// `≥ 0x20300`. Returns `None` for older CDs.
     pub fn code_limit_64(&self) -> Option<u64> {
         if self.version < cd_version::SUPPORTS_CODE_LIMIT64 {
@@ -628,7 +628,7 @@ impl<'a> CodeDirectory<'a> {
         read_u64_be_at(self.blob, CD_FIELD_CODE_LIMIT_64)
     }
 
-    /// `execSegBase` — VM offset of the first executable segment.
+    /// `execSegBase` - VM offset of the first executable segment.
     /// `Some` for CDs of version `≥ 0x20400`, `None` otherwise.
     pub fn exec_seg_base(&self) -> Option<u64> {
         if self.version < cd_version::SUPPORTS_EXEC_SEG {
@@ -637,7 +637,7 @@ impl<'a> CodeDirectory<'a> {
         read_u64_be_at(self.blob, CD_FIELD_EXEC_SEG_BASE)
     }
 
-    /// `execSegLimit` — byte length of the executable segment
+    /// `execSegLimit` - byte length of the executable segment
     /// region.
     pub fn exec_seg_limit(&self) -> Option<u64> {
         if self.version < cd_version::SUPPORTS_EXEC_SEG {
@@ -646,7 +646,7 @@ impl<'a> CodeDirectory<'a> {
         read_u64_be_at(self.blob, CD_FIELD_EXEC_SEG_LIMIT)
     }
 
-    /// `execSegFlags` — `CS_EXECSEG_*` flag bits.
+    /// `execSegFlags` - `CS_EXECSEG_*` flag bits.
     pub fn exec_seg_flags(&self) -> Option<u64> {
         if self.version < cd_version::SUPPORTS_EXEC_SEG {
             return None;
@@ -760,7 +760,7 @@ impl<'a> Signature<'a> {
 
     /// Iterator over alternate CodeDirectories (slots
     /// `0x1000..=0x1004`). Modern Apple-signed binaries carry
-    /// 0–4 alternates plus the primary CD; adhoc binaries carry
+    /// 0-4 alternates plus the primary CD; adhoc binaries carry
     /// only the primary so this iterator is empty.
     pub fn alternate_code_directories(&self) -> CodeDirectoryIter<'a> {
         CodeDirectoryIter {
@@ -788,7 +788,7 @@ impl<'a> Signature<'a> {
 
     /// Embedded CMS signature wrapper (`CSMAGIC_BLOBWRAPPER`,
     /// `0xfade0b01`) at slot `CSSLOT_SIGNATURESLOT`.
-    /// Always returned when the slot exists — even adhoc
+    /// Always returned when the slot exists - even adhoc
     /// signatures carry an empty wrapper. Use
     /// [`CmsSignature::is_present`] to distinguish empty
     /// placeholders from real CMS payloads.
@@ -798,7 +798,7 @@ impl<'a> Signature<'a> {
     }
 
     /// Internal-requirements vector (`CSMAGIC_REQUIREMENTS`,
-    /// `0xfade0c01`). Surfaced as opaque bytes for v0.1 — the
+    /// `0xfade0c01`). Surfaced as opaque bytes for v0.1 - the
     /// CSEL / CSCO requirement-expression DSL is a follow-up.
     pub fn requirements(&self) -> Option<Requirements<'a>> {
         let blob = self.find_blob_bytes(Slot::Requirements)?;
@@ -836,7 +836,7 @@ impl<'a> Iterator for CodeDirectoryIter<'a> {
 /// 0xfade7171`, cite: `cs_blobs.h:97`).
 ///
 /// Carried in slot [`Slot::Entitlements`] of the SuperBlob. The
-/// on-disk payload is a Property List in XML form — the same format
+/// on-disk payload is a Property List in XML form - the same format
 /// `codesign --entitlements` extracts and `codesign --sign` ingests.
 /// The 8-byte `(magic, length)` header from the enclosing blob is
 /// stripped from `payload`.
@@ -845,14 +845,14 @@ impl<'a> Iterator for CodeDirectoryIter<'a> {
 /// that want to hash or pretty-print the original;
 /// [`parsed`](Self::parsed) decodes them into a [`plist::Value`] via
 /// the `plist` crate. Both views borrow from the binary's data
-/// slice — no allocation beyond what `plist` needs.
+/// slice - no allocation beyond what `plist` needs.
 #[derive(Debug, Clone, Copy)]
 pub struct Entitlements<'a> {
     payload: &'a [u8],
 }
 
 impl<'a> Entitlements<'a> {
-    /// Parse an entitlements blob — returns `None` if the magic
+    /// Parse an entitlements blob - returns `None` if the magic
     /// doesn't match or the blob is truncated.
     pub fn parse(blob: &'a [u8]) -> Option<Self> {
         if blob.len() < BLOB_HEADER_SIZE {
@@ -886,7 +886,7 @@ impl<'a> Entitlements<'a> {
 /// `cs_blobs.h:98`).
 ///
 /// Carried in slot [`Slot::DerEntitlements`]. macOS 11 / iOS 14 made
-/// this blob mandatory for hardened-runtime and iOS signatures —
+/// this blob mandatory for hardened-runtime and iOS signatures -
 /// AMFI parses the DER form, not the XML. An XML entitlements blob
 /// without a matching DER blob will be rejected at launch on those
 /// OS versions.
@@ -912,7 +912,7 @@ pub struct DerEntitlements<'a> {
 }
 
 impl<'a> DerEntitlements<'a> {
-    /// Parse a DER-entitlements blob — returns `None` on bad
+    /// Parse a DER-entitlements blob - returns `None` on bad
     /// magic or truncation.
     pub fn parse(blob: &'a [u8]) -> Option<Self> {
         if blob.len() < BLOB_HEADER_SIZE {
@@ -951,7 +951,7 @@ impl<'a> DerEntitlements<'a> {
     /// Decoded top-level entitlement key/value pairs, in on-disk order.
     ///
     /// Reads both the `UTF8String` key and the typed value of each
-    /// entry — [`Boolean`](DerEntitlementValue::Bool),
+    /// entry - [`Boolean`](DerEntitlementValue::Bool),
     /// [`Integer`](DerEntitlementValue::Integer),
     /// [`String`](DerEntitlementValue::String), or
     /// [`Array`](DerEntitlementValue::Array) (nested `SEQUENCE`/`SET`).
@@ -1024,7 +1024,7 @@ const MAX_DER_VALUE_DEPTH: u32 = 32;
 /// 0xfade0c01`, cite: `cs_blobs.h:93`).
 ///
 /// Carried in slot [`Slot::Requirements`]. Holds the binary's
-/// "designated requirement" — the predicate the kernel evaluates to
+/// "designated requirement" - the predicate the kernel evaluates to
 /// decide whether *this* signing identity is allowed to claim the
 /// binary's Team ID / bundle ID. Each entry of the vector is itself
 /// a [`CSMAGIC_REQUIREMENT`] blob using
@@ -1043,7 +1043,7 @@ pub struct Requirements<'a> {
 }
 
 impl<'a> Requirements<'a> {
-    /// Parse a requirements blob — returns `None` on bad magic
+    /// Parse a requirements blob - returns `None` on bad magic
     /// or truncation.
     pub fn parse(blob: &'a [u8]) -> Option<Self> {
         if blob.len() < BLOB_HEADER_SIZE {
@@ -1074,7 +1074,7 @@ impl<'a> Requirements<'a> {
         self.blob
     }
 
-    /// `count` field — number of requirement entries indexed
+    /// `count` field - number of requirement entries indexed
     /// from this vector. `0` for the empty placeholder that
     /// `codesign -s -` writes by default.
     pub fn count(&self) -> u32 {
@@ -1106,7 +1106,7 @@ impl<'a> Requirements<'a> {
     pub fn decoded(&self) -> Vec<DecodedRequirement> {
         let mut out = Vec::new();
         // Bound the loop by both the recorded count and a hard cap so
-        // a corrupt `count` can't spin — real signatures carry ≤ 5.
+        // a corrupt `count` can't spin - real signatures carry ≤ 5.
         let count = core::cmp::min(self.count as usize, MAX_REQUIREMENT_ENTRIES);
         for i in 0..count {
             let Some(entry_off) =
@@ -1133,7 +1133,7 @@ impl<'a> Requirements<'a> {
 /// `CSMAGIC_REQUIREMENTS` blob: past the 8-byte header and the 4-byte
 /// `count`.
 const REQUIREMENTS_INDEX_OFFSET: usize = 12;
-/// Hard cap on decoded requirement entries — a defensive bound against
+/// Hard cap on decoded requirement entries - a defensive bound against
 /// a corrupt `count`. Apple binaries carry at most five (one per
 /// [`RequirementKind`]).
 const MAX_REQUIREMENT_ENTRIES: usize = 32;
@@ -1145,16 +1145,16 @@ const MAX_REQUIREMENT_DEPTH: u32 = 64;
 /// (cite: `requirement.h` `SecRequirementType`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RequirementKind {
-    /// `kSecHostRequirementType = 1` — what hosts may run us.
+    /// `kSecHostRequirementType = 1` - what hosts may run us.
     Host,
-    /// `kSecGuestRequirementType = 2` — what guests we may run.
+    /// `kSecGuestRequirementType = 2` - what guests we may run.
     Guest,
-    /// `kSecDesignatedRequirementType = 3` — the designated
+    /// `kSecDesignatedRequirementType = 3` - the designated
     /// requirement, the predicate that identifies this code.
     Designated,
-    /// `kSecLibraryRequirementType = 4` — what libraries we may link.
+    /// `kSecLibraryRequirementType = 4` - what libraries we may link.
     Library,
-    /// `kSecPluginRequirementType = 5` — what plug-ins we may load.
+    /// `kSecPluginRequirementType = 5` - what plug-ins we may load.
     Plugin,
     /// Any other / unrecognized requirement type code.
     Other(u32),
@@ -1204,14 +1204,14 @@ pub struct DecodedRequirement {
 ///
 /// Carried in slot [`Slot::SignatureSlot`]. The wrapper is just an
 /// 8-byte `(magic, length)` envelope around an opaque CMS / PKCS#7
-/// `SignedData` blob (RFC 5652) — the signer-chain certificates,
+/// `SignedData` blob (RFC 5652) - the signer-chain certificates,
 /// signature timestamp, and the signed CDHash digest live inside.
 /// `codesign` calls into Apple's `CMSDecoder` to verify the
 /// envelope; `darwinscope` v0.1 reports presence and size only,
 /// leaving the signer-chain / x509 decoder for a follow-up.
 ///
 /// **Adhoc** signatures (`codesign -s -`) carry an *empty* wrapper
-/// (header only, payload length zero) — the kernel skips CMS
+/// (header only, payload length zero) - the kernel skips CMS
 /// verification entirely and only checks the CDHash against the
 /// in-memory pages. [`is_present`](Self::is_present) discriminates
 /// the two cases.
@@ -1221,7 +1221,7 @@ pub struct CmsSignature<'a> {
 }
 
 impl<'a> CmsSignature<'a> {
-    /// Parse a CMS BlobWrapper — returns `None` on bad magic or
+    /// Parse a CMS BlobWrapper - returns `None` on bad magic or
     /// truncation.
     pub fn parse(blob: &'a [u8]) -> Option<Self> {
         if blob.len() < BLOB_HEADER_SIZE {
@@ -1266,7 +1266,7 @@ impl<'a> CmsSignature<'a> {
 //
 // Minimal tag/length parser sufficient to extract the top-level
 // key list from Apple's canonical entitlements DER shape. Not a
-// general-purpose ASN.1 reader — it knows just the few tags used.
+// general-purpose ASN.1 reader - it knows just the few tags used.
 
 fn der_collect_keys(payload: &[u8]) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
@@ -1342,14 +1342,14 @@ fn der_locate_entries(payload: &[u8]) -> Option<&[u8]> {
         if matches!(hdr.tag, 0x30 | 0x31 | 0xa0 | 0xb0) {
             break outer_body.get(body_start..body_end)?;
         }
-        // Unknown — bail.
+        // Unknown - bail.
         return None;
     };
     Some(inner)
 }
 
 /// Like [`der_collect_keys`] but decodes each entry's value as well,
-/// preserving on-disk order (no sort/dedup — order is meaningful for
+/// preserving on-disk order (no sort/dedup - order is meaningful for
 /// display).
 fn der_collect_pairs(payload: &[u8]) -> Vec<(String, DerEntitlementValue)> {
     let mut out: Vec<(String, DerEntitlementValue)> = Vec::new();
@@ -1867,7 +1867,7 @@ mod tests {
     fn signature_blob_iter_returns_index_entries() {
         // SuperBlob with one index entry: slot=2 (Requirements),
         // offset=0x1c. The blob payload at 0x1c isn't required for
-        // iter() to enumerate — only for blob_bytes_at().
+        // iter() to enumerate - only for blob_bytes_at().
         let mut bytes = vec![
             0xfa, 0xde, 0x0c, 0xc0, // magic
             0x00, 0x00, 0x00, 0x1c, // length = 28

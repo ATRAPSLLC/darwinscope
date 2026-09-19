@@ -33,19 +33,19 @@ impl<'a, 'p> Symbol<'a, 'p> {
         self.name
     }
 
-    /// `nlist.n_strx` — index into `LC_SYMTAB.stroff`.
+    /// `nlist.n_strx` - index into `LC_SYMTAB.stroff`.
     pub fn n_strx(&self) -> u32 {
         // n_strx is widened to usize in goblin; the on-disk field is
         // u32 and is bounded by stroff/strsize. Safe to narrow back.
         self.nlist.n_strx as u32
     }
 
-    /// `nlist.n_type` — full byte (`N_STAB | N_PEXT | N_TYPE | N_EXT`).
+    /// `nlist.n_type` - full byte (`N_STAB | N_PEXT | N_TYPE | N_EXT`).
     pub fn n_type(&self) -> u8 {
         self.nlist.n_type
     }
 
-    /// Kind of symbol — the `N_TYPE` (0x0e) bits of `n_type`.
+    /// Kind of symbol - the `N_TYPE` (0x0e) bits of `n_type`.
     pub fn kind(&self) -> SymbolKind {
         if self.is_stab() {
             return SymbolKind::Stab(self.nlist.n_type);
@@ -68,13 +68,13 @@ impl<'a, 'p> Symbol<'a, 'p> {
         (self.nlist.n_sect & 0xff) as u8
     }
 
-    /// `nlist.n_desc` — flags + library ordinal (for two-level
+    /// `nlist.n_desc` - flags + library ordinal (for two-level
     /// lookups).
     pub fn n_desc(&self) -> u16 {
         self.nlist.n_desc
     }
 
-    /// `nlist.n_value` — symbol VM address (for `Section` symbols)
+    /// `nlist.n_value` - symbol VM address (for `Section` symbols)
     /// or stab-specific value otherwise.
     pub fn n_value(&self) -> u64 {
         self.nlist.n_value
@@ -100,7 +100,7 @@ impl<'a, 'p> Symbol<'a, 'p> {
         self.nlist.n_desc & (N_WEAK_REF | N_WEAK_DEF) != 0
     }
 
-    /// Symbolic-debugging entry — any of the `N_STAB` bits set.
+    /// Symbolic-debugging entry - any of the `N_STAB` bits set.
     pub fn is_stab(&self) -> bool {
         self.nlist.n_type & N_STAB != 0
     }
@@ -118,21 +118,21 @@ impl core::fmt::Debug for Symbol<'_, '_> {
     }
 }
 
-/// Kind of nlist symbol — the `N_TYPE` (0x0e) bits of `n_type`,
+/// Kind of nlist symbol - the `N_TYPE` (0x0e) bits of `n_type`,
 /// extended with a `Stab` variant for symbolic-debugging entries.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SymbolKind {
-    /// `N_UNDF` — undefined (resolved by dyld at load time).
+    /// `N_UNDF` - undefined (resolved by dyld at load time).
     Undefined,
-    /// `N_ABS` — absolute, not relocated.
+    /// `N_ABS` - absolute, not relocated.
     Absolute,
-    /// `N_SECT` — defined in the section ordinal `n_sect`.
+    /// `N_SECT` - defined in the section ordinal `n_sect`.
     Section,
-    /// `N_PBUD` — prebound undefined (defined in a dylib).
+    /// `N_PBUD` - prebound undefined (defined in a dylib).
     PreboundUndefined,
-    /// `N_INDR` — indirect symbol.
+    /// `N_INDR` - indirect symbol.
     Indirect,
-    /// Symbolic-debugging entry — the full `n_type` byte is
+    /// Symbolic-debugging entry - the full `n_type` byte is
     /// preserved (it carries an `N_*` stab kind).
     Stab(u8),
     /// Future / unknown `N_TYPE` value.

@@ -5,7 +5,7 @@
 //! (per `swift/include/swift/ABI/ObjectFile.h:62`'s
 //! `sectionContainsReflectionData` predicate), but linker variants
 //! occasionally place individual sections under `__DATA_CONST` or
-//! `__const`. The lookup therefore matches **section name only** —
+//! `__const`. The lookup therefore matches **section name only** -
 //! the segment is informational. This mirrors the ObjC convention in
 //! [`crate::objc::section`].
 

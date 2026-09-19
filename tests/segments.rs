@@ -88,6 +88,24 @@ fn section_metadata_text() {
     assert!(attrs.contains(SectionAttributes::SOME_INSTRUCTIONS));
 }
 
+/// A section states whether its own bytes are instructions, and the answer
+/// differs *inside* one `r-x` segment: `__text` holds code and `__cstring`,
+/// which shares `__TEXT`, does not. Reading the segment's `initprot` instead
+/// gives both the same answer and it is wrong for one of them.
+#[test]
+fn a_section_states_whether_it_holds_instructions() {
+    let bytes = load();
+    let bin = MachoBinary::parse(&bytes).unwrap();
+    let text = bin.sections().find(|s| s.sectname() == "__text").unwrap();
+    let cstring = bin
+        .sections()
+        .find(|s| s.sectname() == "__cstring")
+        .unwrap();
+    assert_eq!(text.segname(), cstring.segname(), "both live in __TEXT");
+    assert!(text.holds_instructions());
+    assert!(!cstring.holds_instructions());
+}
+
 #[test]
 fn cstring_section_type() {
     let bytes = load();

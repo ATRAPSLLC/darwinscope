@@ -17,35 +17,35 @@ use crate::util::read_u32_le_at;
 /// Returned by value because the on-disk struct is only 8 bytes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ImageInfo {
-    /// `objc_image_info.version` — currently always `0`.
+    /// `objc_image_info.version` - currently always `0`.
     pub version: u32,
-    /// `objc_image_info.flags` — `OBJC_IMAGE_*` bits plus the packed
+    /// `objc_image_info.flags` - `OBJC_IMAGE_*` bits plus the packed
     /// Swift ABI version. Use the named accessors below for
     /// individual flags.
     pub flags: u32,
 }
 
-/// `OBJC_IMAGE_DYLD_CATEGORIES_OPTIMIZED` (`1 << 0`) — categories
+/// `OBJC_IMAGE_DYLD_CATEGORIES_OPTIMIZED` (`1 << 0`) - categories
 /// have been preattached by dyld in the shared cache.
 pub const OBJC_IMAGE_DYLD_CATEGORIES_OPTIMIZED: u32 = 1 << 0;
-/// `OBJC_IMAGE_SUPPORTS_GC` (`1 << 1`) — image was built with
+/// `OBJC_IMAGE_SUPPORTS_GC` (`1 << 1`) - image was built with
 /// optional GC support (legacy).
 pub const OBJC_IMAGE_SUPPORTS_GC: u32 = 1 << 1;
-/// `OBJC_IMAGE_REQUIRES_GC` (`1 << 2`) — image requires GC (legacy).
+/// `OBJC_IMAGE_REQUIRES_GC` (`1 << 2`) - image requires GC (legacy).
 pub const OBJC_IMAGE_REQUIRES_GC: u32 = 1 << 2;
-/// `OBJC_IMAGE_OPTIMIZED_BY_DYLD` (`1 << 3`) — image is from an
+/// `OBJC_IMAGE_OPTIMIZED_BY_DYLD` (`1 << 3`) - image is from an
 /// optimised shared cache.
 pub const OBJC_IMAGE_OPTIMIZED_BY_DYLD: u32 = 1 << 3;
-/// `OBJC_IMAGE_SIGNED_CLASS_RO` (`1 << 4`) — `class_ro_t` pointers
+/// `OBJC_IMAGE_SIGNED_CLASS_RO` (`1 << 4`) - `class_ro_t` pointers
 /// in this image are PAC-signed (arm64e only).
 pub const OBJC_IMAGE_SIGNED_CLASS_RO: u32 = 1 << 4;
-/// `OBJC_IMAGE_IS_SIMULATED` (`1 << 5`) — image was compiled for a
+/// `OBJC_IMAGE_IS_SIMULATED` (`1 << 5`) - image was compiled for a
 /// simulator runtime.
 pub const OBJC_IMAGE_IS_SIMULATED: u32 = 1 << 5;
-/// `OBJC_IMAGE_HAS_CATEGORY_CLASS_PROPERTIES` (`1 << 6`) —
+/// `OBJC_IMAGE_HAS_CATEGORY_CLASS_PROPERTIES` (`1 << 6`) -
 /// `category_t._classProperties` field is present on disk.
 pub const OBJC_IMAGE_HAS_CATEGORY_CLASS_PROPERTIES: u32 = 1 << 6;
-/// `OBJC_IMAGE_OPTIMIZED_BY_DYLD_CLOSURE` (`1 << 7`) — set by old
+/// `OBJC_IMAGE_OPTIMIZED_BY_DYLD_CLOSURE` (`1 << 7`) - set by old
 /// dyld, superseded.
 pub const OBJC_IMAGE_OPTIMIZED_BY_DYLD_CLOSURE: u32 = 1 << 7;
 

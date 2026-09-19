@@ -3,14 +3,14 @@
 //! Wraps `goblin::mach::segment` and exposes typed iterators with
 //! the borrowed-slice view-type shape used elsewhere in the crate.
 //!
-//! - [`Segment`] — view over a single segment load command.
-//! - [`SegmentIter`] — iterator over [`MachoBinary::segments`].
-//! - [`Section`] — view over a single section header plus body
+//! - [`Segment`] - view over a single segment load command.
+//! - [`SegmentIter`] - iterator over [`MachoBinary::segments`].
+//! - [`Section`] - view over a single section header plus body
 //!   slice. The lazy [`Section::shannon_entropy`] and
 //!   [`Section::blake3`] accessors are computed on caller request
 //!   and *not* part of the base view, so a consumer that only
 //!   enumerates names pays nothing.
-//! - [`SectionIter`] — flat iterator over every section across every
+//! - [`SectionIter`] - flat iterator over every section across every
 //!   segment (returned by [`MachoBinary::sections`]).
 //!
 //! ## Zero-fill sections
@@ -203,14 +203,31 @@ impl<'a, 'p> Section<'a, 'p> {
         self.inner.flags
     }
 
-    /// Section type — the low 8 bits of `flags`.
+    /// Section type - the low 8 bits of `flags`.
     pub fn section_type(&self) -> SectionType {
         SectionType::from_raw(self.inner.flags & SECTION_TYPE_MASK)
     }
 
-    /// Section attributes — the high 24 bits of `flags`.
+    /// Section attributes - the high 24 bits of `flags`.
     pub fn attributes(&self) -> SectionAttributes {
         SectionAttributes::from_bits_retain(self.inner.flags & !SECTION_TYPE_MASK)
+    }
+
+    /// Whether the section's own header says its bytes are machine
+    /// instructions.
+    ///
+    /// The *attributes* decide this, never the section type and never the
+    /// containing segment's `initprot`. A segment is protected as a unit -
+    /// `__TEXT` is `r-x` on every image - so reading executability off it
+    /// calls `__cstring`, `__unwind_info` and the Swift metadata sections
+    /// code. And the type is no better in the other direction: `__stubs` is
+    /// `S_SYMBOL_STUBS` while `__stub_helper` and `__objc_stubs` are
+    /// `S_REGULAR`, yet all three are instruction-bearing, which only
+    /// [`SectionAttributes::PURE_INSTRUCTIONS`] /
+    /// [`SectionAttributes::SOME_INSTRUCTIONS`] state.
+    pub fn holds_instructions(&self) -> bool {
+        self.attributes()
+            .intersects(SectionAttributes::PURE_INSTRUCTIONS | SectionAttributes::SOME_INSTRUCTIONS)
     }
 
     /// On-disk bytes for this section.
@@ -228,7 +245,7 @@ impl<'a, 'p> Section<'a, 'p> {
     /// range `0.0..=8.0`. Returns `0.0` for empty bodies (zero-fill
     /// sections, truncated input).
     ///
-    /// Computed on every call — the result is **not** cached.
+    /// Computed on every call - the result is **not** cached.
     /// Callers that need it repeatedly should memoize externally.
     pub fn shannon_entropy(&self) -> f64 {
         shannon_entropy(self.body)
@@ -256,7 +273,7 @@ impl core::fmt::Debug for Section<'_, '_> {
     }
 }
 
-/// Source of segments for a [`SectionIter`] — either flat across all
+/// Source of segments for a [`SectionIter`] - either flat across all
 /// of them, or scoped to a single segment.
 enum SegmentSource<'a, 'p> {
     All(core::slice::Iter<'p, GoblinSegment<'a>>),
@@ -326,35 +343,35 @@ impl<'a, 'p> Iterator for SectionIter<'a, 'p> {
 /// type appears that this crate does not yet recognize.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SectionType {
-    /// `S_REGULAR` — regular section.
+    /// `S_REGULAR` - regular section.
     Regular,
-    /// `S_ZEROFILL` — zero-fill on demand.
+    /// `S_ZEROFILL` - zero-fill on demand.
     ZeroFill,
-    /// `S_CSTRING_LITERALS` — only NUL-terminated C strings.
+    /// `S_CSTRING_LITERALS` - only NUL-terminated C strings.
     CStringLiterals,
-    /// `S_4BYTE_LITERALS` — only 4-byte literals.
+    /// `S_4BYTE_LITERALS` - only 4-byte literals.
     FourByteLiterals,
-    /// `S_8BYTE_LITERALS` — only 8-byte literals.
+    /// `S_8BYTE_LITERALS` - only 8-byte literals.
     EightByteLiterals,
-    /// `S_LITERAL_POINTERS` — section with only pointers to literals.
+    /// `S_LITERAL_POINTERS` - section with only pointers to literals.
     LiteralPointers,
     /// `S_NON_LAZY_SYMBOL_POINTERS`.
     NonLazySymbolPointers,
     /// `S_LAZY_SYMBOL_POINTERS`.
     LazySymbolPointers,
-    /// `S_SYMBOL_STUBS` — section with only symbol stubs.
+    /// `S_SYMBOL_STUBS` - section with only symbol stubs.
     SymbolStubs,
     /// `S_MOD_INIT_FUNC_POINTERS`.
     ModInitFuncPointers,
     /// `S_MOD_TERM_FUNC_POINTERS`.
     ModTermFuncPointers,
-    /// `S_COALESCED` — coalesced symbols.
+    /// `S_COALESCED` - coalesced symbols.
     Coalesced,
-    /// `S_GB_ZEROFILL` — > 4 GiB zero-fill on demand.
+    /// `S_GB_ZEROFILL` - > 4 GiB zero-fill on demand.
     GbZeroFill,
-    /// `S_INTERPOSING` — interposing functions.
+    /// `S_INTERPOSING` - interposing functions.
     Interposing,
-    /// `S_16BYTE_LITERALS` — only 16-byte literals.
+    /// `S_16BYTE_LITERALS` - only 16-byte literals.
     SixteenByteLiterals,
     /// `S_DTRACE_DOF`.
     DtraceDof,
@@ -370,7 +387,7 @@ pub enum SectionType {
     ThreadLocalVariablePointers,
     /// `S_THREAD_LOCAL_INIT_FUNCTION_POINTERS`.
     ThreadLocalInitFunctionPointers,
-    /// Anything else — value preserved for round-trip.
+    /// Anything else - value preserved for round-trip.
     Other(u32),
 }
 
@@ -419,26 +436,26 @@ bitflags! {
     /// `Section::flags`).
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct SectionAttributes: u32 {
-        /// `S_ATTR_PURE_INSTRUCTIONS` — section contains only
+        /// `S_ATTR_PURE_INSTRUCTIONS` - section contains only
         /// machine instructions.
         const PURE_INSTRUCTIONS = 0x8000_0000;
-        /// `S_ATTR_NO_TOC` — coalesced symbols not in TOC.
+        /// `S_ATTR_NO_TOC` - coalesced symbols not in TOC.
         const NO_TOC = 0x4000_0000;
-        /// `S_ATTR_STRIP_STATIC_SYMS` — strippable static symbols.
+        /// `S_ATTR_STRIP_STATIC_SYMS` - strippable static symbols.
         const STRIP_STATIC_SYMS = 0x2000_0000;
-        /// `S_ATTR_NO_DEAD_STRIP` — no dead-strip the section.
+        /// `S_ATTR_NO_DEAD_STRIP` - no dead-strip the section.
         const NO_DEAD_STRIP = 0x1000_0000;
-        /// `S_ATTR_LIVE_SUPPORT` — live blocks reference this section.
+        /// `S_ATTR_LIVE_SUPPORT` - live blocks reference this section.
         const LIVE_SUPPORT = 0x0800_0000;
         /// `S_ATTR_SELF_MODIFYING_CODE`.
         const SELF_MODIFYING_CODE = 0x0400_0000;
-        /// `S_ATTR_DEBUG` — debug section.
+        /// `S_ATTR_DEBUG` - debug section.
         const DEBUG_SECTION = 0x0200_0000;
-        /// `S_ATTR_SOME_INSTRUCTIONS` — contains some instructions.
+        /// `S_ATTR_SOME_INSTRUCTIONS` - contains some instructions.
         const SOME_INSTRUCTIONS = 0x0000_0400;
-        /// `S_ATTR_EXT_RELOC` — has external relocation entries.
+        /// `S_ATTR_EXT_RELOC` - has external relocation entries.
         const EXT_RELOC = 0x0000_0200;
-        /// `S_ATTR_LOC_RELOC` — has local relocation entries.
+        /// `S_ATTR_LOC_RELOC` - has local relocation entries.
         const LOC_RELOC = 0x0000_0100;
     }
 }

@@ -11,36 +11,36 @@
 //! `RESEARCH.md:1854-1881`.
 //!
 //! Block order (declared in the trailing-objects template type
-//! list — fixed, can't be permuted):
+//! list - fixed, can't be permuted):
 //!
-//! 1. `TargetTypeGenericContextDescriptorHeader` — iff `Generic`.
-//! 2. `TargetResilientSuperclass` — iff
+//! 1. `TargetTypeGenericContextDescriptorHeader` - iff `Generic`.
+//! 2. `TargetResilientSuperclass` - iff
 //!    `Class_HasResilientSuperclass` (class only).
-//! 3. `TargetForeignMetadataInitialization` — iff
+//! 3. `TargetForeignMetadataInitialization` - iff
 //!    `MetadataInitialization == Foreign`.
-//! 4. `TargetSingletonMetadataInitialization` — iff
+//! 4. `TargetSingletonMetadataInitialization` - iff
 //!    `MetadataInitialization == Singleton`.
-//! 5. `TargetVTableDescriptorHeader` + `TargetMethodDescriptor[N]`
-//!    — iff `Class_HasVTable` (class only).
+//! 5. `TargetVTableDescriptorHeader` + `TargetMethodDescriptor[N]` -
+//!    iff `Class_HasVTable` (class only).
 //! 6. `TargetOverrideTableHeader` +
-//!    `TargetMethodOverrideDescriptor[N]` — iff
+//!    `TargetMethodOverrideDescriptor[N]` - iff
 //!    `Class_HasOverrideTable` (class only).
-//! 7. `TargetObjCResilientClassStubInfo` — iff stub-flag set
+//! 7. `TargetObjCResilientClassStubInfo` - iff stub-flag set
 //!    (class only). Detected via the `ExtraClassFlags`
 //!    `HasObjCResilientClassStub` bit.
 //! 8. Canonical specialised metadatas (count + entries +
-//!    accessors) — iff
+//!    accessors) - iff
 //!    [`crate::swift::TypeContextDescriptorFlags::has_canonical_metadata_prespecializations`]
 //!    is set.
-//! 9. `InvertibleProtocolSet` — iff
+//! 9. `InvertibleProtocolSet` - iff
 //!    [`crate::swift::ContextDescriptorFlags::has_invertible_protocols`].
-//! 10. `TargetSingletonMetadataPointer` — iff
+//! 10. `TargetSingletonMetadataPointer` - iff
 //!     [`crate::swift::TypeContextDescriptorFlags::has_singleton_metadata_pointer`].
 //! 11. `TargetMethodDefaultOverrideTableHeader` +
-//!     `TargetMethodDefaultOverrideDescriptor[N]` — iff
+//!     `TargetMethodDefaultOverrideDescriptor[N]` - iff
 //!     `Class_HasDefaultOverrideTable` (class only).
 //!
-//! All inter-block alignment is 4 bytes — every relative pointer
+//! All inter-block alignment is 4 bytes - every relative pointer
 //! and `u32` count satisfies that natively. The lone exception is
 //! `InvertibleProtocolSet` (a `u16`), which we pad to 4 bytes after
 //! consuming the payload to keep the cursor 4-aligned for any
@@ -62,7 +62,7 @@ use crate::{
     util::{read_i32_le_at, read_u16_le_at, read_u32_le_at, relative_pointer},
 };
 
-/// `TargetGenericContextDescriptorHeader` decoded snapshot — the
+/// `TargetGenericContextDescriptorHeader` decoded snapshot - the
 /// universal generic header. For type-kind descriptors the on-disk
 /// `TargetTypeGenericContextDescriptorHeader` adds
 /// `(InstantiationCache, DefaultInstantiationPattern)` slots
@@ -73,20 +73,20 @@ use crate::{
 pub struct GenericContextHeader<'a> {
     /// VA of the header.
     pub address: u64,
-    /// `NumParams` — generic parameter count.
+    /// `NumParams` - generic parameter count.
     pub num_params: u16,
-    /// `NumRequirements` — generic-requirement count.
+    /// `NumRequirements` - generic-requirement count.
     pub num_requirements: u16,
-    /// `NumKeyArguments` — runtime-passed generic argument count.
+    /// `NumKeyArguments` - runtime-passed generic argument count.
     pub num_key_arguments: u16,
-    /// `NumExtraArguments` (renamed `NumPackShapes` in modern Swift)
-    /// — extra generic-argument count.
+    /// `NumExtraArguments` (renamed `NumPackShapes` in modern Swift) -
+    /// extra generic-argument count.
     pub num_extra_arguments: u16,
     /// `InstantiationCache` relative pointer (resolved VA, `0` when
-    /// null) — present for type-context generic headers.
+    /// null) - present for type-context generic headers.
     pub instantiation_cache_va: u64,
     /// `DefaultInstantiationPattern` relative pointer (resolved VA,
-    /// `0` when null) — present for type-context generic headers.
+    /// `0` when null) - present for type-context generic headers.
     pub default_instantiation_pattern_va: u64,
     /// VA of the trailing `GenericParamDescriptor[NumParams]` array.
     pub params_base_va: u64,
@@ -98,7 +98,7 @@ pub struct GenericContextHeader<'a> {
     pub _marker: core::marker::PhantomData<&'a [u8]>,
 }
 
-/// `TargetResilientSuperclass` — class trailing block carrying the
+/// `TargetResilientSuperclass` - class trailing block carrying the
 /// resilient-superclass type reference.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ResilientSuperclass<'a> {
@@ -112,7 +112,7 @@ pub struct ResilientSuperclass<'a> {
     pub _marker: core::marker::PhantomData<&'a [u8]>,
 }
 
-/// `TargetForeignMetadataInitialization` — trailing block emitted
+/// `TargetForeignMetadataInitialization` - trailing block emitted
 /// when [`crate::swift::MetadataInitializationKind::Foreign`] is in effect.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ForeignMetadataInit {
@@ -122,7 +122,7 @@ pub struct ForeignMetadataInit {
     pub completion_function_va: u64,
 }
 
-/// `TargetSingletonMetadataInitialization` — trailing block emitted
+/// `TargetSingletonMetadataInitialization` - trailing block emitted
 /// when [`crate::swift::MetadataInitializationKind::Singleton`] is in effect.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SingletonMetadataInit {
@@ -138,7 +138,7 @@ pub struct SingletonMetadataInit {
     pub completion_function_va: u64,
 }
 
-/// `TargetSingletonMetadataPointer` — trailing block emitted when
+/// `TargetSingletonMetadataPointer` - trailing block emitted when
 /// [`crate::swift::TypeContextDescriptorFlags::has_singleton_metadata_pointer`]
 /// is set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -149,7 +149,7 @@ pub struct SingletonMetadataPointer {
     pub metadata_va: u64,
 }
 
-/// `TargetObjCResilientClassStubInfo` — trailing block emitted when
+/// `TargetObjCResilientClassStubInfo` - trailing block emitted when
 /// the class declares an Obj-C resilient stub.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ObjcResilientClassStubInfo {
@@ -159,14 +159,14 @@ pub struct ObjcResilientClassStubInfo {
     pub stub_va: u64,
 }
 
-/// 16-bit `InvertibleProtocolSet` payload — emitted when
+/// 16-bit `InvertibleProtocolSet` payload - emitted when
 /// [`crate::swift::ContextDescriptorFlags::has_invertible_protocols`] is set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct InvertibleProtocolSet {
     /// VA of the payload.
     pub address: u64,
     /// 16-bit bitmask of inverted protocol kinds (`Copyable`,
-    /// `Escapable`, …) — bit positions per
+    /// `Escapable`, …) - bit positions per
     /// `swift/include/swift/ABI/InvertibleProtocols.def`.
     pub bits: u16,
 }
@@ -286,7 +286,7 @@ pub(crate) fn decode_class_trailers<'a>(
         }
     }
 
-    // 7. ObjC resilient class stub info — gated on a bit in
+    // 7. ObjC resilient class stub info - gated on a bit in
     // ExtraClassFlags. We surface presence when ExtraClassFlags is
     // populated AND its bit 0 (HasObjCResilientClassStub) is set.
     let has_objc_stub = body
@@ -438,9 +438,9 @@ pub(crate) fn decode_value_type_trailers(
 ///
 /// Trailing arrays:
 ///
-/// - `GenericParamDescriptor[NumParams]` — 1 byte each, padded to
+/// - `GenericParamDescriptor[NumParams]` - 1 byte each, padded to
 ///   4-byte alignment.
-/// - `GenericRequirementDescriptor[NumRequirements]` — 12 bytes
+/// - `GenericRequirementDescriptor[NumRequirements]` - 12 bytes
 ///   each.
 ///
 /// Key-arguments / extra-arguments occupy slots in the trailing
@@ -452,14 +452,14 @@ fn decode_generic_header(rt: &SwiftRuntime<'_>, header_va: u64) -> Option<(u64, 
 
     let mut cursor = header_va.checked_add(16)?;
 
-    // GenericParamDescriptor[NumParams] — 1 byte each, padded up to
+    // GenericParamDescriptor[NumParams] - 1 byte each, padded up to
     // a 4-byte boundary.
     let params_size = u64::from(num_params);
     cursor = cursor.checked_add(params_size)?;
     let pad = (4u64.wrapping_sub(params_size & 0x3)) & 0x3;
     cursor = cursor.checked_add(pad)?;
 
-    // GenericRequirementDescriptor[NumRequirements] — 12 bytes
+    // GenericRequirementDescriptor[NumRequirements] - 12 bytes
     // each.
     let req_size = u64::from(num_requirements).checked_mul(12)?;
     cursor = cursor.checked_add(req_size)?;
@@ -527,10 +527,10 @@ fn decode_prespecializations(rt: &SwiftRuntime<'_>, header_va: u64) -> Option<(u
     let count_bytes = rt.read_bytes(header_va, 4)?;
     let count = read_u32_le_at(count_bytes, 0)?;
     let entries_va = header_va.checked_add(4)?;
-    // CanonicalSpecializedMetadatasListEntry[count] — i32 rel each.
+    // CanonicalSpecializedMetadatasListEntry[count] - i32 rel each.
     let entries_size = u64::from(count).checked_mul(4)?;
     let after_entries = entries_va.checked_add(entries_size)?;
-    // CanonicalSpecializedMetadataAccessorsListEntry[count] — i32
+    // CanonicalSpecializedMetadataAccessorsListEntry[count] - i32
     // rel each (compact function pointer).
     let accessors_size = u64::from(count).checked_mul(4)?;
     let end = after_entries.checked_add(accessors_size)?;

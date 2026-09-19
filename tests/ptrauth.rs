@@ -53,7 +53,7 @@ fn ptr_auth_value_construction_round_trips() {
     assert!(pa.addr_div);
     assert_eq!(pa.key, PacKey::DA);
 
-    // Copy semantics — required because `Rebase::ptr_auth()` returns
+    // Copy semantics - required because `Rebase::ptr_auth()` returns
     // `Option<PtrAuth>` by value.
     let pa2 = pa;
     assert_eq!(pa, pa2);
@@ -61,7 +61,7 @@ fn ptr_auth_value_construction_round_trips() {
 
 #[test]
 fn pac_key_decoding_matches_arm64e_abi() {
-    // Cite: dyld/include/mach-o/fixup-chains.h:142 — 0=IA, 1=IB,
+    // Cite: dyld/include/mach-o/fixup-chains.h:142 - 0=IA, 1=IB,
     // 2=DA, 3=DB.
     assert_eq!(PacKey::from_bits(0), PacKey::IA);
     assert_eq!(PacKey::from_bits(1), PacKey::IB);

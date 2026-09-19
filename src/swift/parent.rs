@@ -1,7 +1,7 @@
 //! Parent-context chain walker.
 //!
 //! Follows the `Parent` relative pointer of a context descriptor
-//! upward until the chain terminates at a top-level descriptor —
+//! upward until the chain terminates at a top-level descriptor -
 //! typically a `TargetModuleContextDescriptor` (kind=`Module`)
 //! that exposes the Swift module name. Walking the chain yields
 //! the fully-qualified name (e.g. `MyApp.SubModule.MyClass`).
@@ -155,7 +155,7 @@ impl<'a, 'p> crate::swift::TypeDescriptor<'a, 'p> {
     ///
     /// Returns an empty iterator when the descriptor has no parent
     /// (top-level type defined directly under a module that ships
-    /// without a parent context — extremely rare; module-less top-
+    /// without a parent context - extremely rare; module-less top-
     /// level types have a parent with a null Name).
     pub fn parent(&self) -> ParentChain<'a, 'p> {
         if self.parent_va == 0 {

@@ -1,4 +1,4 @@
-//! Stage 1 PR 6 — Export trie walker.
+//! Stage 1 PR 6 - Export trie walker.
 //!
 //! Both fixtures must yield the same two exports:
 //! `__mh_execute_header` (image header) and `_main`.
@@ -83,7 +83,7 @@ fn export_offset_field_populated_for_regular_exports() {
     for e in bin.exports() {
         if let ExportInfo::Regular { address } = e.info {
             // Goblin's `Export.offset` is set to the ExportInfo
-            // Regular address by design — they should match.
+            // Regular address by design - they should match.
             assert_eq!(e.offset, address, "{}: offset/address mismatch", e.name);
         }
     }

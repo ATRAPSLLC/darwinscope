@@ -48,7 +48,7 @@ fn objc_tiny_arm64_decodes_ascii_literals() {
     let entries: Vec<_> = rt.iter().collect();
     assert!(
         !entries.is_empty(),
-        "objc-tiny.m has six NSString literals — expected non-empty __cfstring"
+        "objc-tiny.m has six NSString literals - expected non-empty __cfstring"
     );
 
     // Every literal in this fixture is ASCII.

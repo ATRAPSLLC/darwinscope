@@ -46,7 +46,7 @@
 }
 @end
 
-// Category on a foreign class — linker cannot merge this, so it
+// Category on a foreign class - linker cannot merge this, so it
 // lives in __objc_catlist with a bind to _OBJC_CLASS_$_NSString.
 // Forces the walker to resolve a category's `cls` pointer through
 // the chained-fixup binds table.

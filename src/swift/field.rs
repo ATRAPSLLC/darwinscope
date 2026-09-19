@@ -93,14 +93,14 @@ impl<'a, 'p> FieldDescriptor<'a, 'p> {
         self.kind
     }
 
-    /// `FieldRecordSize` — bytes per trailing record. Currently
+    /// `FieldRecordSize` - bytes per trailing record. Currently
     /// always `12`; surfaced verbatim so callers can detect
     /// future-runtime drift.
     pub fn field_record_size(&self) -> u16 {
         self.field_record_size
     }
 
-    /// `NumFields` — count of trailing [`FieldRecord`] entries.
+    /// `NumFields` - count of trailing [`FieldRecord`] entries.
     pub fn num_fields(&self) -> u32 {
         self.num_fields
     }
@@ -192,7 +192,7 @@ impl<'a, 'p> Iterator for FieldIter<'a, 'p> {
             Some(_) | None => {
                 #[cfg(feature = "tracing")]
                 tracing::debug!(
-                    "darwinscope::swift: field descriptor at section+0x{:x} overruns __swift5_fieldmd — stop",
+                    "darwinscope::swift: field descriptor at section+0x{:x} overruns __swift5_fieldmd - stop",
                     start_off,
                 );
                 return None;

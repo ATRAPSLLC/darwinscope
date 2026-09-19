@@ -19,7 +19,7 @@
 //! ```
 //!
 //! Walks both `__objc_catlist` (lazy) and `__objc_nlcatlist`
-//! (non-lazy), de-duped by category VA — modern toolchains emit
+//! (non-lazy), de-duped by category VA - modern toolchains emit
 //! the same category record into both sections under the
 //! "non-lazy means it must be eagerly attached" rule, but we never
 //! emit a duplicate row.
@@ -43,7 +43,7 @@ const CATEGORY_WITH_CLASS_PROPS_SIZE: usize = 56;
 /// Cite: `objc4/runtime/objc-runtime-new.h:3196-3217`. A category
 /// declares additional methods, protocols, and properties that the
 /// runtime grafts onto an existing class at image load time. Unlike
-/// a subclass, a category modifies the *target* class itself —
+/// a subclass, a category modifies the *target* class itself -
 /// callers that already hold instances see the new methods
 /// immediately. The host class can live in any image; cross-image
 /// categories use a chained-fixup bind on the `cls` slot, which
@@ -90,9 +90,9 @@ impl<'a, 'p> ObjcCategory<'a, 'p> {
 
     /// Resolved host-class name. Tries:
     ///
-    /// 1. In-image lookup — if `cls` resolves to a `class_t` whose
+    /// 1. In-image lookup - if `cls` resolves to a `class_t` whose
     ///    `class_ro_t.name` is reachable, return that name.
-    /// 2. Chained-fixup bind on the `cls` slot — return the bind
+    /// 2. Chained-fixup bind on the `cls` slot - return the bind
     ///    symbol's name with the `_OBJC_CLASS_$_` prefix stripped.
     ///
     /// Returns `None` when both fail (heavily stripped / corrupt
@@ -131,7 +131,7 @@ impl<'a, 'p> ObjcCategory<'a, 'p> {
 
     /// Class-property additions. Empty when
     /// `OBJC_IMAGE_HAS_CATEGORY_CLASS_PROPERTIES` is clear in
-    /// `__objc_imageinfo.flags` — older toolchains do not emit this
+    /// `__objc_imageinfo.flags` - older toolchains do not emit this
     /// trailing field.
     pub fn class_properties(&self) -> PropertyIter<'a, 'p> {
         match self.class_properties_va {
@@ -197,7 +197,7 @@ impl<'a, 'p> Iterator for CategoryIter<'a, 'p> {
             }
             #[cfg(feature = "tracing")]
             tracing::debug!(
-                "darwinscope::objc: category at 0x{:x} skipped — decode failed",
+                "darwinscope::objc: category at 0x{:x} skipped - decode failed",
                 va
             );
         }

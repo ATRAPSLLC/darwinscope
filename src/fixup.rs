@@ -11,11 +11,11 @@
 //! decoded in subsequent PRs (`RebaseIter` / `BindIter`); this
 //! module currently surfaces:
 //!
-//! - [`ChainedFixups`] — the header walker.
-//! - [`ChainedSegment`] — per-segment metadata
+//! - [`ChainedFixups`] - the header walker.
+//! - [`ChainedSegment`] - per-segment metadata
 //!   (`pointer_format`, `page_size`, `page_count`, ...).
-//! - [`ChainedImport`] — one row of the imports table.
-//! - [`PointerFormat`] — decoded `DYLD_CHAINED_PTR_*` enum.
+//! - [`ChainedImport`] - one row of the imports table.
+//! - [`PointerFormat`] - decoded `DYLD_CHAINED_PTR_*` enum.
 //!
 //! See `RESEARCH.md` §"`LC_DYLD_CHAINED_FIXUPS` encoding"
 //! (line 2189) for the exhaustive on-disk layout.
@@ -56,20 +56,20 @@ const SIZEOF_STARTS_IN_SEGMENT_HEADER: usize = 22;
 /// per-page iterators per the fail-soft rule.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PointerFormat {
-    /// `DYLD_CHAINED_PTR_ARM64E` — value `1`, stride 8.
+    /// `DYLD_CHAINED_PTR_ARM64E` - value `1`, stride 8.
     Arm64e,
-    /// `DYLD_CHAINED_PTR_64` — value `2`, stride 4.
+    /// `DYLD_CHAINED_PTR_64` - value `2`, stride 4.
     Ptr64,
-    /// `DYLD_CHAINED_PTR_64_OFFSET` — value `6`, stride 4.
+    /// `DYLD_CHAINED_PTR_64_OFFSET` - value `6`, stride 4.
     Ptr64Offset,
-    /// `DYLD_CHAINED_PTR_ARM64E_KERNEL` — value `7`, stride 4.
+    /// `DYLD_CHAINED_PTR_ARM64E_KERNEL` - value `7`, stride 4.
     Arm64eKernel,
-    /// `DYLD_CHAINED_PTR_ARM64E_USERLAND` — value `9`, stride 8.
+    /// `DYLD_CHAINED_PTR_ARM64E_USERLAND` - value `9`, stride 8.
     Arm64eUserland,
-    /// `DYLD_CHAINED_PTR_ARM64E_USERLAND24` — value `12`, stride 8.
+    /// `DYLD_CHAINED_PTR_ARM64E_USERLAND24` - value `12`, stride 8.
     /// 24-bit bind ordinals (vs 16 in the other arm64e formats).
     Arm64eUserland24,
-    /// `DYLD_CHAINED_PTR_ARM64E_SHARED_CACHE` — value `13`, stride 8.
+    /// `DYLD_CHAINED_PTR_ARM64E_SHARED_CACHE` - value `13`, stride 8.
     Arm64eSharedCache,
     /// Any other `DYLD_CHAINED_PTR_*` value (32-bit, kernel cache,
     /// firmware, segmented). Out of v0.1 scope; chains for these
@@ -111,12 +111,12 @@ impl PointerFormat {
 /// [`dyld_chained_fixups_header.imports_format`](https://github.com/apple-oss-distributions/dyld/blob/main/include/mach-o/fixup-chains.h).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ImportsFormat {
-    /// `DYLD_CHAINED_IMPORT` — 4 bytes per entry.
+    /// `DYLD_CHAINED_IMPORT` - 4 bytes per entry.
     Plain,
-    /// `DYLD_CHAINED_IMPORT_ADDEND` — 8 bytes per entry
+    /// `DYLD_CHAINED_IMPORT_ADDEND` - 8 bytes per entry
     /// (4-byte plain + `int32_t` addend).
     Addend,
-    /// `DYLD_CHAINED_IMPORT_ADDEND64` — 16 bytes per entry, used
+    /// `DYLD_CHAINED_IMPORT_ADDEND64` - 16 bytes per entry, used
     /// for 64-bit ordinal / 64-bit addend cases.
     Addend64,
     /// Unknown imports format. Iterators yield nothing.
@@ -172,14 +172,14 @@ pub struct ChainedSegment {
     pub raw_pointer_format: u16,
     /// Offset of the segment's start in the in-memory image.
     pub segment_offset: u64,
-    /// 32-bit-only sentinel — values above this in chains are not
+    /// 32-bit-only sentinel - values above this in chains are not
     /// pointers. `0` for 64-bit segments.
     pub max_valid_pointer: u32,
     /// Number of pages the segment occupies.
     pub page_count: u16,
     /// Absolute byte offset (within the binary's data slice) of
     /// this segment's `dyld_chained_starts_in_segment` header.
-    /// Internal — drives the per-page chain walk added in
+    /// Internal - drives the per-page chain walk added in
     /// later PRs.
     #[allow(dead_code)]
     pub(crate) starts_offset: usize,
@@ -223,7 +223,7 @@ pub struct ChainedImport<'a> {
 pub struct ChainedFixups<'a> {
     /// Full data slice of the parsed Mach-O slice (matches
     /// [`MachoBinary::raw`](crate::binary::MachoBinary::raw)).
-    /// Chained-fixup offsets translate inside this slice — for fat
+    /// Chained-fixup offsets translate inside this slice - for fat
     /// binaries this is the slice's bytes, not the outer fat
     /// archive.
     data: &'a [u8],
@@ -286,7 +286,7 @@ impl<'a> ChainedFixups<'a> {
         })
     }
 
-    /// `dyld_chained_fixups_header.fixups_version` — `0` for the
+    /// `dyld_chained_fixups_header.fixups_version` - `0` for the
     /// only currently-defined version.
     pub fn version(&self) -> u32 {
         self.fixups_version
@@ -307,7 +307,7 @@ impl<'a> ChainedFixups<'a> {
         self.raw_imports_format
     }
 
-    /// `dyld_chained_fixups_header.symbols_format` — `0` for raw
+    /// `dyld_chained_fixups_header.symbols_format` - `0` for raw
     /// UTF-8, `1` for zlib-compressed (`darwinscope` does not
     /// currently decompress; an iterator over a zlib pool yields
     /// empty names).
@@ -318,7 +318,7 @@ impl<'a> ChainedFixups<'a> {
     /// Iterator over the per-segment chain-start blocks.
     ///
     /// Skips segments whose `seg_info_offset` is `0` (i.e. segments
-    /// that don't participate in chained fixups — `__PAGEZERO`,
+    /// that don't participate in chained fixups - `__PAGEZERO`,
     /// `__LINKEDIT`).
     pub fn segments(&self) -> ChainedSegmentIter<'a> {
         let starts_in_image_off = self.base.saturating_add(self.starts_offset as usize);
@@ -485,7 +485,7 @@ impl<'a> Iterator for ChainedImportIter<'a> {
 
 /// One decoded chained-fixup *rebase* row.
 ///
-/// A rebase points at another address inside the *same* image —
+/// A rebase points at another address inside the *same* image -
 /// dyld's job at load time is to add the slide (`actual_load_addr -
 /// preferred_load_addr`) so the stored VA is correct after ASLR. By
 /// contrast, a [`Bind`] resolves to a symbol in *another* image
@@ -543,7 +543,7 @@ impl Rebase {
         self.ptr_auth
     }
 
-    /// `high8` field from `_64` / `_64_OFFSET` rebase slots — the
+    /// `high8` field from `_64` / `_64_OFFSET` rebase slots - the
     /// top 8 bits dyld OR's into the final pointer (used for
     /// tagged-pointer support). `None` for arm64e formats.
     pub fn high8(&self) -> Option<u8> {
@@ -558,7 +558,7 @@ impl Rebase {
 
 /// One decoded chained-fixup *bind* row.
 ///
-/// A bind references an external symbol — at load time dyld
+/// A bind references an external symbol - at load time dyld
 /// resolves `(name, dylib)` by walking the dylib's export trie,
 /// then writes `resolved_address + addend` into the slot at
 /// `vm_address`. This is the chained-fixup analogue of the legacy
@@ -567,7 +567,7 @@ impl Rebase {
 ///
 /// `name` and `dylib` are zero-copy borrows of the binary's
 /// imports symbol pool and `LC_LOAD_*_DYLIB` install-name strings
-/// respectively. `is_weak` marks the bind as `BIND_WEAK_IMPORT` —
+/// respectively. `is_weak` marks the bind as `BIND_WEAK_IMPORT` -
 /// dyld is allowed to leave the slot zero if no exporter is found.
 #[derive(Debug, Clone, Copy)]
 pub struct Bind<'a> {
@@ -650,7 +650,7 @@ impl<'a> Bind<'a> {
 
 /// Iterator over chained-fixup rebases.
 ///
-/// Backed by a [`Vec`] populated when the iterator is constructed —
+/// Backed by a [`Vec`] populated when the iterator is constructed -
 /// the chain walk runs once eagerly so that
 /// [`MachoBinary::chained_rebases`](crate::binary::MachoBinary::chained_rebases)
 /// and [`MachoBinary::chained_binds`](crate::binary::MachoBinary::chained_binds)
@@ -833,7 +833,7 @@ fn decode_segment_chains<'a>(
                 Some(v) => v,
                 None => break,
             };
-            // Bounds check against segment filesize — chain entries
+            // Bounds check against segment filesize - chain entries
             // beyond on-disk extent are not legal.
             if page_byte_off >= loc.filesize {
                 break;

@@ -42,16 +42,16 @@
 //! ## Detection strategy
 //!
 //! darwinscope locates blocks through the chained-fixup / classic
-//! bind index, not by scanning data sections blindly. Every block —
-//! global or stack — has its `isa` slot bound at link time to one of
+//! bind index, not by scanning data sections blindly. Every block -
+//! global or stack - has its `isa` slot bound at link time to one of
 //! the runtime's two anchor symbols:
 //!
-//! - `_NSConcreteGlobalBlock` — emitted by clang for blocks that
+//! - `_NSConcreteGlobalBlock` - emitted by clang for blocks that
 //!   capture nothing (or only consts). The bind site is the start of
 //!   the literal in `__DATA_CONST,__const` / `__DATA,__data`. We
 //!   walk forward 32 bytes to read flags / invoke / descriptor and
 //!   follow the descriptor pointer.
-//! - `_NSConcreteStackBlock` — emitted by clang for blocks that
+//! - `_NSConcreteStackBlock` - emitted by clang for blocks that
 //!   capture mutable state. The literal is built on the stack at
 //!   runtime; the bind site is typically in `__DATA,__got`, so there
 //!   is no fixed-address descriptor to decode. We surface its
@@ -66,7 +66,7 @@
 //!
 //! [`MachoBinary::blocks`](crate::binary::MachoBinary::blocks) returns
 //! `None` when the image binds neither `_NSConcreteGlobalBlock` nor
-//! `_NSConcreteStackBlock` — i.e. carries no Blocks-runtime usage.
+//! `_NSConcreteStackBlock` - i.e. carries no Blocks-runtime usage.
 //! Per-literal decode failures (descriptor pointer outside any
 //! segment, truncated body) yield [`BlockLiteral::descriptor`] =
 //! `None` rather than dropping the row.
@@ -80,23 +80,23 @@ use crate::{
     util::{read_cstr_at, read_u32_le_at, read_u64_le_at, vm_to_file_offset_in},
 };
 
-/// `_NSConcreteGlobalBlock` anchor symbol — `isa` of every clang-
+/// `_NSConcreteGlobalBlock` anchor symbol - `isa` of every clang-
 /// emitted global block.
 pub const NSCONCRETE_GLOBAL_BLOCK: &str = "_NSConcreteGlobalBlock";
-/// `_NSConcreteStackBlock` anchor symbol — `isa` of every stack
+/// `_NSConcreteStackBlock` anchor symbol - `isa` of every stack
 /// block; literal is materialised on the stack at runtime.
 pub const NSCONCRETE_STACK_BLOCK: &str = "_NSConcreteStackBlock";
 
-/// `BLOCK_HAS_COPY_DISPOSE` — `Block_descriptor_2` is present.
+/// `BLOCK_HAS_COPY_DISPOSE` - `Block_descriptor_2` is present.
 pub const BLOCK_HAS_COPY_DISPOSE: u32 = 1 << 25;
-/// `BLOCK_HAS_CTOR` — copy / dispose helpers are C++ ctor / dtor.
+/// `BLOCK_HAS_CTOR` - copy / dispose helpers are C++ ctor / dtor.
 pub const BLOCK_HAS_CTOR: u32 = 1 << 26;
-/// `BLOCK_IS_GLOBAL` — `isa = _NSConcreteGlobalBlock`. Set on every
+/// `BLOCK_IS_GLOBAL` - `isa = _NSConcreteGlobalBlock`. Set on every
 /// literal we successfully decode through this walker.
 pub const BLOCK_IS_GLOBAL: u32 = 1 << 28;
-/// `BLOCK_HAS_STRET` — invoke function uses the sret return ABI.
+/// `BLOCK_HAS_STRET` - invoke function uses the sret return ABI.
 pub const BLOCK_HAS_STRET: u32 = 1 << 29;
-/// `BLOCK_HAS_SIGNATURE` — `Block_descriptor_3` is present.
+/// `BLOCK_HAS_SIGNATURE` - `Block_descriptor_3` is present.
 pub const BLOCK_HAS_SIGNATURE: u32 = 1 << 30;
 
 /// Size of `Block_layout` (`isa` + `flags` + `reserved` + `invoke` +
@@ -106,9 +106,9 @@ const BLOCK_LAYOUT_SIZE: usize = 32;
 /// Which anchor `isa` a [`BlockReference`] bound to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockIsa {
-    /// `_NSConcreteGlobalBlock` — literal lives in `__DATA*`.
+    /// `_NSConcreteGlobalBlock` - literal lives in `__DATA*`.
     Global,
-    /// `_NSConcreteStackBlock` — literal is built on the stack at
+    /// `_NSConcreteStackBlock` - literal is built on the stack at
     /// runtime; bind site is typically in `__DATA,__got`.
     Stack,
 }
@@ -117,7 +117,7 @@ pub enum BlockIsa {
 /// `_NSConcreteStackBlock`.
 ///
 /// Captures the raw bind row even when the surrounding bytes do not
-/// decode as a [`BlockLiteral`] — useful for callers that just want
+/// decode as a [`BlockLiteral`] - useful for callers that just want
 /// to record "this image uses Blocks" without committing to a full
 /// decode.
 #[derive(Debug, Clone, Copy)]
@@ -135,7 +135,7 @@ pub struct BlockReference<'a> {
 /// Decoded `Block_layout` plus its `Block_descriptor_*` tail.
 #[derive(Debug, Clone)]
 pub struct BlockLiteral<'a> {
-    /// VM address of the literal — same as the `isa` slot's bind
+    /// VM address of the literal - same as the `isa` slot's bind
     /// site VA.
     pub address: u64,
     /// Anchor `isa` this literal binds to. Always
@@ -146,7 +146,7 @@ pub struct BlockLiteral<'a> {
     /// Raw `flags` field. Use the named accessors for individual
     /// `BLOCK_*` bits.
     pub flags: u32,
-    /// `Block_layout.reserved` — `0` for global blocks; runtime-
+    /// `Block_layout.reserved` - `0` for global blocks; runtime-
     /// managed retain-count for stack blocks (we never decode
     /// stack literals, so this field is informational only).
     pub reserved: u32,
@@ -162,26 +162,26 @@ pub struct BlockLiteral<'a> {
 }
 
 impl BlockLiteral<'_> {
-    /// `BLOCK_IS_GLOBAL` — `flags & (1 << 28)`.
+    /// `BLOCK_IS_GLOBAL` - `flags & (1 << 28)`.
     pub fn is_global(&self) -> bool {
         self.flags & BLOCK_IS_GLOBAL != 0
     }
-    /// `BLOCK_HAS_COPY_DISPOSE` — `flags & (1 << 25)`. When set the
+    /// `BLOCK_HAS_COPY_DISPOSE` - `flags & (1 << 25)`. When set the
     /// descriptor carries `copy_helper` and `dispose_helper` slots.
     pub fn has_copy_dispose(&self) -> bool {
         self.flags & BLOCK_HAS_COPY_DISPOSE != 0
     }
-    /// `BLOCK_HAS_CTOR` — `flags & (1 << 26)`. Helpers are C++ ctor
+    /// `BLOCK_HAS_CTOR` - `flags & (1 << 26)`. Helpers are C++ ctor
     /// / dtor (only meaningful when [`Self::has_copy_dispose`]).
     pub fn has_ctor(&self) -> bool {
         self.flags & BLOCK_HAS_CTOR != 0
     }
-    /// `BLOCK_HAS_STRET` — `flags & (1 << 29)`. The invoke function
+    /// `BLOCK_HAS_STRET` - `flags & (1 << 29)`. The invoke function
     /// uses the sret (struct-return) calling convention.
     pub fn has_stret(&self) -> bool {
         self.flags & BLOCK_HAS_STRET != 0
     }
-    /// `BLOCK_HAS_SIGNATURE` — `flags & (1 << 30)`. When set the
+    /// `BLOCK_HAS_SIGNATURE` - `flags & (1 << 30)`. When set the
     /// descriptor carries a `signature` C-string (Obj-C type encoding
     /// of the invoke function) and a GC layout string.
     pub fn has_signature(&self) -> bool {
@@ -199,10 +199,10 @@ impl BlockLiteral<'_> {
 pub struct BlockDescriptor<'a> {
     /// VM address of the descriptor.
     pub address: u64,
-    /// `Block_descriptor_1.reserved` — always `0` in current
+    /// `Block_descriptor_1.reserved` - always `0` in current
     /// toolchains.
     pub reserved: u64,
-    /// `Block_descriptor_1.size` — `sizeof(Block_layout)` plus
+    /// `Block_descriptor_1.size` - `sizeof(Block_layout)` plus
     /// captured-variable storage. Always `>= BLOCK_LAYOUT_SIZE`.
     pub size: u64,
     /// `Block_descriptor_2.copy` (canonical VA) when
@@ -211,10 +211,10 @@ pub struct BlockDescriptor<'a> {
     /// `Block_descriptor_2.dispose` (canonical VA) when
     /// [`BlockLiteral::has_copy_dispose`].
     pub dispose_helper: Option<u64>,
-    /// `Block_descriptor_3.signature` — Obj-C type encoding of the
+    /// `Block_descriptor_3.signature` - Obj-C type encoding of the
     /// invoke function, when [`BlockLiteral::has_signature`].
     pub signature: Option<&'a str>,
-    /// `Block_descriptor_3.layout` — GC layout / capture-encoding
+    /// `Block_descriptor_3.layout` - GC layout / capture-encoding
     /// string, when [`BlockLiteral::has_signature`].
     pub layout_string: Option<&'a str>,
 }
@@ -245,7 +245,7 @@ impl<'a> BlockRuntime<'a> {
     pub(crate) fn build(bin: &MachoBinary<'a>) -> Option<Self> {
         if !bin.header().is_64() {
             #[cfg(feature = "tracing")]
-            tracing::debug!("darwinscope::block: 32-bit Mach-O — Block walker is 64-bit only");
+            tracing::debug!("darwinscope::block: 32-bit Mach-O - Block walker is 64-bit only");
             return None;
         }
 
@@ -313,7 +313,7 @@ impl<'a> BlockRuntime<'a> {
         !self.stack_sites.is_empty()
     }
 
-    /// Iterator over every Blocks-anchor bind in this image —
+    /// Iterator over every Blocks-anchor bind in this image -
     /// [`BlockIsa::Global`] then [`BlockIsa::Stack`], in bind order.
     ///
     /// Useful for callers that just want to enumerate every block
@@ -330,7 +330,7 @@ impl<'a> BlockRuntime<'a> {
 
     /// Iterator over every decoded global block literal.
     ///
-    /// Stack blocks are not represented here — their literal is
+    /// Stack blocks are not represented here - their literal is
     /// built on the stack at runtime, with no fixed-address
     /// descriptor. Use [`Self::has_stack_blocks`] /
     /// [`Self::references`] to enumerate stack-block sites.
@@ -448,7 +448,7 @@ impl<'a> BlockRuntime<'a> {
     }
 }
 
-/// Iterator yielding every [`BlockReference`] — globals first, then
+/// Iterator yielding every [`BlockReference`] - globals first, then
 /// stacks, in bind order within each phase.
 pub struct ReferenceIter<'a, 'p> {
     rt: &'p BlockRuntime<'a>,
@@ -578,13 +578,13 @@ mod tests {
     ///
     /// We hand-construct the [`BlockRuntime`] rather than going
     /// through [`MachoBinary::blocks`] because the canonical Block ABI
-    /// is segment-table-only — the decode path doesn't care whether
+    /// is segment-table-only - the decode path doesn't care whether
     /// it's looking at a real Mach-O or a synthesized byte buffer, so
     /// pinning the wire format is far cheaper here than maintaining
     /// a `.o` fixture under `tests/samples/`.
     #[test]
     fn decode_literal_full_descriptor_3() {
-        // VM layout — pick a single 4 KiB page mapped 1:1.
+        // VM layout - pick a single 4 KiB page mapped 1:1.
         const VMBASE: u64 = 0x1_0000_0000;
         // Buffer indices align with VM offsets relative to VMBASE.
         let mut buf = vec![0u8; 0x200];
@@ -667,7 +667,7 @@ mod tests {
     }
 
     /// `decode_descriptor` rejects entries whose `size` field is
-    /// implausibly small — the most common signal that a bind site
+    /// implausibly small - the most common signal that a bind site
     /// landed on a `__got` slot rather than a real block literal.
     #[test]
     fn decode_descriptor_rejects_size_below_block_layout() {

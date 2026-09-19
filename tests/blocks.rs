@@ -4,7 +4,7 @@
 //! the Blocks runtime (the `objc-tiny.m` source uses `@autoreleasepool`
 //! and Foundation calls but no `^{}` block expressions, and the
 //! `hello-cli` / `swift-tiny` fixtures don't use blocks either). The
-//! integration tests here therefore pin the negative path —
+//! integration tests here therefore pin the negative path -
 //! `MachoBinary::blocks()` must return `None` when neither
 //! `_NSConcreteGlobalBlock` nor `_NSConcreteStackBlock` is bound.
 //!
@@ -40,7 +40,7 @@ fn hello_cli_has_no_blocks_runtime() {
     let bin = MachoBinary::parse(&bytes).unwrap();
     assert!(
         bin.blocks().is_none(),
-        "hello-arm64 binds neither block anchor — blocks() must return None"
+        "hello-arm64 binds neither block anchor - blocks() must return None"
     );
 }
 
@@ -50,7 +50,7 @@ fn objc_tiny_has_no_blocks_runtime() {
     let bin = MachoBinary::parse(&bytes).unwrap();
     assert!(
         bin.blocks().is_none(),
-        "objc-tiny.m uses no ^{{}} expressions — blocks() must return None"
+        "objc-tiny.m uses no ^{{}} expressions - blocks() must return None"
     );
 }
 
@@ -60,6 +60,6 @@ fn swift_tiny_has_no_blocks_runtime() {
     let bin = MachoBinary::parse(&bytes).unwrap();
     assert!(
         bin.blocks().is_none(),
-        "swift-tiny carries no Obj-C blocks — blocks() must return None"
+        "swift-tiny carries no Obj-C blocks - blocks() must return None"
     );
 }

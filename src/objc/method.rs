@@ -3,7 +3,7 @@
 //! Decodes both on-disk shapes the toolchain emits:
 //!
 //! - **Legacy** 24-byte format (`method_t`): three absolute u64
-//!   pointers — `(SEL, types, IMP)`. Cite:
+//!   pointers - `(SEL, types, IMP)`. Cite:
 //!   `objc4/runtime/objc-runtime-new.h:914-973` and
 //!   `RESEARCH.md` §"`method_t`" (line 1457).
 //! - **Small** 12-byte format (`method_t::small`): three signed
@@ -15,7 +15,7 @@
 //!   §"`method_t::small`" (line 1478).
 //!
 //! The walker fail-soft skips rows that fail to resolve a selector
-//! string — partial enumerations are preferred to abort.
+//! string - partial enumerations are preferred to abort.
 
 use crate::{
     objc::ObjcRuntime,
@@ -25,17 +25,17 @@ use crate::{
 
 /// `method_list_t.entsizeAndFlags` flag mask.
 ///
-/// Cite: `objc4/runtime/objc-runtime-new.h:1241` —
+/// Cite: `objc4/runtime/objc-runtime-new.h:1241` -
 /// `entsize_list_tt<method_t, method_list_t, 0xffff0003, ...>`. Bits
 /// in the mask are flags; bits *not* in the mask are the entry
 /// size. So `entsize = entsizeAndFlags & 0x0000_fffc`.
 const METHOD_LIST_FLAG_MASK: u32 = 0xffff_0003;
 
-/// `smallMethodListFlag` — entries use the 12-byte relative-offset
+/// `smallMethodListFlag` - entries use the 12-byte relative-offset
 /// layout. Cite: `objc4/runtime/objc-runtime-new.h:980`.
 const SMALL_METHOD_LIST_FLAG: u32 = 0x8000_0000;
 
-/// `relativeMethodSelectorsAreDirectFlag` — small `name` slot
+/// `relativeMethodSelectorsAreDirectFlag` - small `name` slot
 /// points directly into `__objc_methname` (skipping the selref
 /// indirection). Cite: `objc4/runtime/objc-runtime-new.h:982`.
 const RELATIVE_METHOD_SELECTORS_ARE_DIRECT_FLAG: u32 = 0x4000_0000;
@@ -50,7 +50,7 @@ const RELATIVE_METHOD_SELECTORS_ARE_DIRECT_FLAG: u32 = 0x4000_0000;
 ///
 /// The `SmallIndirect` vs `SmallDirect` distinction matters because
 /// only `SmallIndirect` requires the dynamic linker to resolve a
-/// selref slot — the direct form references the selector string
+/// selref slot - the direct form references the selector string
 /// pool directly and is cheaper to walk.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MethodKind {
@@ -60,7 +60,7 @@ pub enum MethodKind {
     /// `objc4/runtime/objc-runtime-new.h:914-973`.
     Legacy,
     /// `method_t::small` (12 bytes / entry) without
-    /// `relativeMethodSelectorsAreDirectFlag` — the selector slot
+    /// `relativeMethodSelectorsAreDirectFlag` - the selector slot
     /// references a `__objc_selrefs` cell, which dyld then binds at
     /// load time to the canonical `SEL` value. Standard in modern
     /// release binaries: it lets the linker dedupe selectors across
@@ -68,7 +68,7 @@ pub enum MethodKind {
     /// `objc4/runtime/objc-runtime-new.h:975-1037`.
     SmallIndirect,
     /// `method_t::small` (12 bytes / entry) with
-    /// `relativeMethodSelectorsAreDirectFlag = 0x4000_0000` — the
+    /// `relativeMethodSelectorsAreDirectFlag = 0x4000_0000` - the
     /// selector slot points *directly* into `__objc_methname`,
     /// skipping the `__objc_selrefs` indirection. Emitted for
     /// classes the toolchain has determined need no cross-image
@@ -95,7 +95,7 @@ pub struct Method<'a> {
     /// `objc4/runtime/runtime.h:@encode`.
     types: &'a str,
     /// Implementation VM address (post-PAC-strip). `None` when the
-    /// method has no implementation — protocols emit method
+    /// method has no implementation - protocols emit method
     /// declarations with `imp = 0`, and the runtime treats those as
     /// abstract until a conforming class supplies a real IMP.
     imp: Option<u64>,
@@ -113,8 +113,8 @@ impl<'a> Method<'a> {
         self.types
     }
 
-    /// IMP target VA (post-PAC-strip). `None` for abstract methods
-    /// — protocols emit method declarations with `imp = 0`.
+    /// IMP target VA (post-PAC-strip). `None` for abstract methods -
+    /// protocols emit method declarations with `imp = 0`.
     pub fn implementation(&self) -> Option<u64> {
         self.imp
     }
@@ -185,7 +185,7 @@ impl<'a, 'p> Iterator for MethodIter<'a, 'p> {
             // Fail-soft: skip rows that fail to resolve.
             #[cfg(feature = "tracing")]
             tracing::debug!(
-                "darwinscope::objc: method row at 0x{:x} (idx={}) skipped — decode failed",
+                "darwinscope::objc: method row at 0x{:x} (idx={}) skipped - decode failed",
                 entry_va,
                 i
             );
@@ -196,11 +196,11 @@ impl<'a, 'p> Iterator for MethodIter<'a, 'p> {
 /// Build a [`MethodIter`] over the `method_list_t` at virtual
 /// address `list_va`.
 ///
-/// `list_va` is a raw pointer slot value — the caller has already
+/// `list_va` is a raw pointer slot value - the caller has already
 /// PAC-stripped it. Returns an empty iterator when:
 ///
 /// - `list_va == 0` (no list).
-/// - The low bit of `list_va` is set (`relative_list_list_t` —
+/// - The low bit of `list_va` is set (`relative_list_list_t` -
 ///   runtime-allocated, never on disk).
 /// - The header at `list_va` cannot be read.
 /// - `entsize` is `0` or smaller than the format demands.
@@ -212,7 +212,7 @@ pub(crate) fn method_list_iter<'a, 'p>(
         if (list_va & 0x1) != 0 {
             #[cfg(feature = "tracing")]
             tracing::debug!(
-                "darwinscope::objc: method list at 0x{:x} has list-of-lists low bit — skipped (runtime-only)",
+                "darwinscope::objc: method list at 0x{:x} has list-of-lists low bit - skipped (runtime-only)",
                 list_va,
             );
         }
@@ -254,7 +254,7 @@ pub(crate) fn method_list_iter<'a, 'p>(
     if entsize < min_entsize {
         #[cfg(feature = "tracing")]
         tracing::debug!(
-            "darwinscope::objc: method list at 0x{:x} has entsize={} (< {}) — skipped",
+            "darwinscope::objc: method list at 0x{:x} has entsize={} (< {}) - skipped",
             list_va,
             entsize,
             min_entsize,
@@ -316,7 +316,7 @@ fn decode_small_method<'a>(
     let types_off = read_i32_le_at(bytes, 4)?;
     let imp_off = read_i32_le_at(bytes, 8)?;
 
-    // Each i32 is a relative pointer from its own slot's address —
+    // Each i32 is a relative pointer from its own slot's address -
     // *not* from the start of the record. Cite
     // `objc4/runtime/objc-runtime-new.h:643-665`.
     let name_slot_va = entry_va;
