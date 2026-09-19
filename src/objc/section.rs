@@ -3,7 +3,7 @@
 //! Modern Xcode places ObjC metadata in `__DATA_CONST` while older
 //! binaries put it in `__DATA`; selector-string sections have always
 //! lived in `__TEXT`. The lookup utility checks **only** the section
-//! name — the segment is informational. Cite:
+//! name - the segment is informational. Cite:
 //! `ld64/src/ld/Options.cpp` (the
 //! `addSectionRename("__DATA", "__objc_…", "__DATA_CONST", "__objc_…")`
 //! block).

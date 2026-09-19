@@ -3,15 +3,15 @@
 //! Two iterators ride on top of the parsed `MachO.load_commands`
 //! vector:
 //!
-//! - [`DylibIter`] — every load command of kind `LC_LOAD_DYLIB`,
+//! - [`DylibIter`] - every load command of kind `LC_LOAD_DYLIB`,
 //!   `LC_LOAD_WEAK_DYLIB`, `LC_REEXPORT_DYLIB`,
 //!   `LC_LOAD_UPWARD_DYLIB`, or `LC_LAZY_LOAD_DYLIB`.
-//! - [`LoadCommandIter`] — flat summary of every load command (one
+//! - [`LoadCommandIter`] - flat summary of every load command (one
 //!   row per `LC_*`), including the `cmd` id, byte offset, size,
 //!   and a `&'a [u8]` slice over the command's raw bytes.
 //!
 //! `LC_ID_DYLIB` (a self-identifying dylib's own `install_name`) is
-//! deliberately *not* surfaced through [`DylibIter`] — it does not
+//! deliberately *not* surfaced through [`DylibIter`] - it does not
 //! describe a dependency. Use [`LoadCommandIter`] to find it if
 //! needed.
 
@@ -31,7 +31,7 @@ pub struct Dylib<'a, 'p> {
     pub name: &'a str,
     /// What kind of load (regular, weak, re-export, …).
     pub kind: DylibKind,
-    /// `dylib.timestamp` — historically a build timestamp; modern
+    /// `dylib.timestamp` - historically a build timestamp; modern
     /// images frequently zero this for reproducible-build reasons.
     pub timestamp: u32,
     /// Current version of the dylib.
@@ -44,15 +44,15 @@ pub struct Dylib<'a, 'p> {
 /// Which `LC_LOAD_*_DYLIB` variant introduced this dependency.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DylibKind {
-    /// `LC_LOAD_DYLIB` — regular, must resolve at load time.
+    /// `LC_LOAD_DYLIB` - regular, must resolve at load time.
     Load,
-    /// `LC_LOAD_WEAK_DYLIB` — weak; missing dylib does not abort.
+    /// `LC_LOAD_WEAK_DYLIB` - weak; missing dylib does not abort.
     LoadWeak,
-    /// `LC_REEXPORT_DYLIB` — re-export the loaded dylib's symbols.
+    /// `LC_REEXPORT_DYLIB` - re-export the loaded dylib's symbols.
     Reexport,
-    /// `LC_LOAD_UPWARD_DYLIB` — upward dependency (cycle break).
+    /// `LC_LOAD_UPWARD_DYLIB` - upward dependency (cycle break).
     LoadUpward,
-    /// `LC_LAZY_LOAD_DYLIB` — defer load until first reference.
+    /// `LC_LAZY_LOAD_DYLIB` - defer load until first reference.
     LazyLoad,
 }
 

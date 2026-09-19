@@ -65,7 +65,7 @@ pub const CPU_SUBTYPE_ANY: u32 = u32::MAX;
 
 /// A parsed Mach-O image.
 ///
-/// Construction is cheap — `parse` only does the structural decode
+/// Construction is cheap - `parse` only does the structural decode
 /// goblin requires; the runtime walkers (objc / swift) are computed
 /// on-demand when their accessors are called.
 ///
@@ -124,8 +124,8 @@ impl<'a> MachoBinary<'a> {
     }
 
     /// Internal: parse the input, picking the first arch that
-    /// satisfies `pred`. Centralises the fat / thin handling and —
-    /// crucially — wires `MachoBinary.data` to the *slice's* bytes,
+    /// satisfies `pred`. Centralises the fat / thin handling and -
+    /// crucially - wires `MachoBinary.data` to the *slice's* bytes,
     /// not the surrounding fat archive, so segment file offsets
     /// translate correctly.
     fn parse_predicate(data: &'a [u8], pred: impl Fn(u32, u32) -> bool) -> Result<Self> {
@@ -290,7 +290,7 @@ impl<'a> MachoBinary<'a> {
     /// For thin binaries this is the same byte slice the caller
     /// passed to [`parse`](Self::parse). For fat (universal)
     /// wrappers it is *just* the bytes of the selected
-    /// architecture slice — segment / section file offsets
+    /// architecture slice - segment / section file offsets
     /// translate inside this slice, not inside the surrounding
     /// fat archive.
     ///
@@ -309,7 +309,7 @@ impl<'a> MachoBinary<'a> {
 
     /// Iterator flattening every section across every segment.
     ///
-    /// Order is segment-major, section-minor — matching `otool -l`
+    /// Order is segment-major, section-minor - matching `otool -l`
     /// output. Use [`segments`](Self::segments) and per-segment
     /// `Segment::sections` if you need to keep the segment
     /// hierarchy.
@@ -328,7 +328,7 @@ impl<'a> MachoBinary<'a> {
 
     /// Iterator over `LC_LOAD_*_DYLIB` dependencies.
     ///
-    /// Excludes `LC_ID_DYLIB` (the binary's own install_name —
+    /// Excludes `LC_ID_DYLIB` (the binary's own install_name -
     /// not a dependency).
     pub fn dylibs(&self) -> DylibIter<'a, '_> {
         DylibIter::new(self.data, &self.macho.load_commands)
@@ -337,7 +337,7 @@ impl<'a> MachoBinary<'a> {
     /// Iterator over every load command, in load-command order.
     ///
     /// Each yielded entry carries the `LC_*` id, byte offset,
-    /// `cmdsize`, and a slice over the raw bytes — useful for
+    /// `cmdsize`, and a slice over the raw bytes - useful for
     /// auditing what the linker put in the image without going
     /// through goblin directly.
     pub fn load_commands(&self) -> LoadCommandIter<'a, '_> {
@@ -384,7 +384,7 @@ impl<'a> MachoBinary<'a> {
         }
     }
 
-    /// Iterator over exports — symbols this image publishes to dyld.
+    /// Iterator over exports - symbols this image publishes to dyld.
     ///
     /// Walks both `LC_DYLD_EXPORTS_TRIE` (modern, standalone) and
     /// `LC_DYLD_INFO[_ONLY].export_*` (legacy). Returns the empty
@@ -430,7 +430,7 @@ impl<'a> MachoBinary<'a> {
             all.push(Import {
                 name: b.name(),
                 dylib: b.dylib(),
-                // Chained binds are non-lazy by construction —
+                // Chained binds are non-lazy by construction -
                 // dyld resolves the entire chain at fix-up time.
                 is_lazy: false,
                 is_weak: b.is_weak(),
@@ -513,7 +513,7 @@ impl<'a> MachoBinary<'a> {
     /// Aggregate Objective-C runtime walker.
     ///
     /// Returns `None` when the image carries no ObjC content
-    /// (`__objc_imageinfo` missing) or when the slice is 32-bit —
+    /// (`__objc_imageinfo` missing) or when the slice is 32-bit -
     /// the v0.1 Obj-C walker is 64-bit only.
     ///
     /// On success the returned [`ObjcRuntime`] owns parsed-once
@@ -529,7 +529,7 @@ impl<'a> MachoBinary<'a> {
     ///
     /// Returns `None` when the image carries no `__cfstring` section
     /// (no CoreFoundation constant strings emitted) or when the
-    /// slice is 32-bit — the v0.1 walker is 64-bit only.
+    /// slice is 32-bit - the v0.1 walker is 64-bit only.
     ///
     /// On success the returned [`CFStringRuntime`]
     /// owns parsed-once metadata (section body, segment table for VA
@@ -545,7 +545,7 @@ impl<'a> MachoBinary<'a> {
     /// Returns `None` when the image binds neither
     /// `_NSConcreteGlobalBlock` nor `_NSConcreteStackBlock` (i.e.
     /// makes no use of the Blocks runtime) or when the slice is
-    /// 32-bit — the v0.1 walker is 64-bit only.
+    /// 32-bit - the v0.1 walker is 64-bit only.
     ///
     /// On success the returned [`BlockRuntime`]
     /// owns parsed-once metadata (bind site index, segment table,
@@ -559,7 +559,7 @@ impl<'a> MachoBinary<'a> {
     ///
     /// Returns `None` when the image carries no Swift content
     /// (none of `__swift5_types`, `__swift5_protos`, `__swift5_proto`,
-    /// `__swift5_fieldmd` is present) or when the slice is 32-bit —
+    /// `__swift5_fieldmd` is present) or when the slice is 32-bit -
     /// the v0.1 Swift walker is 64-bit only.
     ///
     /// On success the returned [`SwiftRuntime`]
@@ -705,7 +705,7 @@ pub struct Header<'p> {
 }
 
 impl<'p> Header<'p> {
-    /// `mach_header.magic` — one of `MH_MAGIC`, `MH_MAGIC_64`,
+    /// `mach_header.magic` - one of `MH_MAGIC`, `MH_MAGIC_64`,
     /// `MH_CIGAM`, `MH_CIGAM_64`.
     pub fn magic(&self) -> u32 {
         self.raw.magic
@@ -767,7 +767,7 @@ impl<'p> Header<'p> {
     /// Minimum OS version this image targets.
     ///
     /// Prefers `LC_BUILD_VERSION` (modern) and falls back to
-    /// `LC_VERSION_MIN_*` (legacy). Only the *first* match wins —
+    /// `LC_VERSION_MIN_*` (legacy). Only the *first* match wins -
     /// images authored before `LC_BUILD_VERSION` exists must use the
     /// legacy commands and are surfaced verbatim.
     pub fn min_os(&self) -> Option<MinOsVersion> {
@@ -814,7 +814,7 @@ impl<'p> Header<'p> {
 /// `LC_VERSION_MIN_*`.
 ///
 /// `platform` is one of the `goblin::mach::load_command::PLATFORM_*`
-/// constants — `1` (`PLATFORM_MACOS`), `2` (`PLATFORM_IOS`), …,
+/// constants - `1` (`PLATFORM_MACOS`), `2` (`PLATFORM_IOS`), …,
 /// `11` (`PLATFORM_VISIONOS`). The legacy `LC_VERSION_MIN_*`
 /// commands have no on-disk platform field; this crate synthesises
 /// it from the load-command code.
@@ -911,7 +911,7 @@ fn arch_matches(
         return true;
     }
     // Strip the high `CPU_SUBTYPE_MASK` capability bits before
-    // comparing — callers typically pass plain subtypes.
+    // comparing - callers typically pass plain subtypes.
     const CPU_SUBTYPE_MASK: u32 = 0xff00_0000;
     (actual_subtype & !CPU_SUBTYPE_MASK) == (want_subtype & !CPU_SUBTYPE_MASK)
 }
@@ -947,7 +947,7 @@ mod tests {
 
     #[test]
     fn version_from_packed_handles_high_major() {
-        // 26.4.0 — the kind of value modern Xcode emits.
+        // 26.4.0 - the kind of value modern Xcode emits.
         let v = Version::from_packed_u32(0x001a_0400);
         assert_eq!(v.major, 26);
         assert_eq!(v.minor, 4);
@@ -997,7 +997,7 @@ mod tests {
     #[test]
     fn read_lc_str_respects_end_limit() {
         let data = b"abcdefghi";
-        // No NUL — entire window returned.
+        // No NUL - entire window returned.
         assert_eq!(read_lc_str(data, 0, 5), Some("abcde"));
     }
 

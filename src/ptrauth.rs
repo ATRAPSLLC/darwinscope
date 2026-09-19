@@ -13,7 +13,7 @@
 //! extract the canonical target field directly from the slot bits
 //! and surface PAC metadata as a [`PtrAuth`] value.
 //!
-//! `darwinscope` is read-only — it never verifies a signature; it
+//! `darwinscope` is read-only - it never verifies a signature; it
 //! only strips the envelope and exposes `(diversity, addr_div, key)`
 //! verbatim for downstream tools that *do* care to match against
 //! expected discriminator constants.
@@ -35,7 +35,7 @@ pub const VA_MASK: u64 = 0x0000_FFFF_FFFF_FFFF;
 /// Strip PAC + chain-encoding bits, leaving the canonical 48-bit
 /// user VA.
 ///
-/// Always succeeds — for slots that aren't pointers, categorisation
+/// Always succeeds - for slots that aren't pointers, categorisation
 /// is the caller's responsibility. This function does **not**
 /// validate the signature; `darwinscope` is a parser, not a
 /// validator. See module docs for the encoding it strips.
@@ -66,14 +66,14 @@ pub struct PtrAuth {
 ///
 /// `IA` is the default for signed code pointers; `DA` is typical
 /// for signed data pointers. The encoding mapping is fixed by the
-/// arm64e ABI — see `dyld/include/mach-o/fixup-chains.h:142`.
+/// arm64e ABI - see `dyld/include/mach-o/fixup-chains.h:142`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PacKey {
-    /// Instruction key A — default for signed code pointers.
+    /// Instruction key A - default for signed code pointers.
     IA,
     /// Instruction key B.
     IB,
-    /// Data key A — default for signed data pointers.
+    /// Data key A - default for signed data pointers.
     DA,
     /// Data key B.
     DB,

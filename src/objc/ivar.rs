@@ -1,7 +1,7 @@
 //! Ivar-list walker.
 //!
 //! Cite: `objc4/runtime/objc-runtime-new.h:1205-1225`
-//! (`ivar_t`) and `:1490-1496` (`ivar_list_t` —
+//! (`ivar_t`) and `:1490-1496` (`ivar_list_t` -
 //! `entsize_list_tt<ivar_t, ivar_list_t, 0>`). `RESEARCH.md`
 //! anchors the layout at line 1512.
 //!
@@ -19,8 +19,8 @@
 
 use crate::{objc::ObjcRuntime, util::read_u32_le_at};
 
-/// 64-bit `WORD_SHIFT` from `objc4/runtime/objc-runtime-new.h:200`
-/// — the default ivar log2-alignment when `alignment_raw == ~0`.
+/// 64-bit `WORD_SHIFT` from `objc4/runtime/objc-runtime-new.h:200` -
+/// the default ivar log2-alignment when `alignment_raw == ~0`.
 const WORD_SHIFT_64: u8 = 3;
 
 /// Per-element size of an `ivar_list_t` entry.
@@ -32,7 +32,7 @@ const IVAR_ENTSIZE: u32 = 32;
 ///
 /// Each ivar binds a name + type-encoding to a runtime offset
 /// inside the instance. The on-disk encoding stores the offset
-/// **indirectly** — the `offset` slot is a pointer to a 32-bit cell
+/// **indirectly** - the `offset` slot is a pointer to a 32-bit cell
 /// (`int32_t* g_ivar_offset_<class>_<name>`). The runtime patches
 /// that cell during class realization to account for superclass
 /// growth, which is why ivars on Apple frameworks ship with offsets
@@ -40,7 +40,7 @@ const IVAR_ENTSIZE: u32 = 32;
 /// [`Ivar::offset`] dereferences the indirection for callers.
 ///
 /// `log2_alignment` defaults to `WORD_SHIFT` (3 on LP64) when the
-/// on-disk `alignment_raw` is `0xffffffff` — the sentinel the
+/// on-disk `alignment_raw` is `0xffffffff` - the sentinel the
 /// compiler writes for "use the platform default".
 #[derive(Debug, Clone)]
 pub struct Ivar<'a> {
@@ -77,7 +77,7 @@ impl<'a> Ivar<'a> {
         self.size
     }
 
-    /// `log2(alignment)` — defaults to `WORD_SHIFT` (3 on LP64) when
+    /// `log2(alignment)` - defaults to `WORD_SHIFT` (3 on LP64) when
     /// the on-disk `alignment_raw` is `~0`.
     pub fn log2_alignment(&self) -> u8 {
         self.log2_alignment
@@ -125,7 +125,7 @@ impl<'a, 'p> Iterator for IvarIter<'a, 'p> {
             }
             #[cfg(feature = "tracing")]
             tracing::debug!(
-                "darwinscope::objc: ivar row at 0x{:x} (idx={}) skipped — decode failed",
+                "darwinscope::objc: ivar row at 0x{:x} (idx={}) skipped - decode failed",
                 entry_va,
                 i
             );
@@ -190,7 +190,7 @@ fn decode_ivar<'a>(rt: &ObjcRuntime<'a>, entry_va: u64) -> Option<Ivar<'a>> {
     let log2_alignment = if alignment_raw == u32::MAX {
         WORD_SHIFT_64
     } else {
-        // Clamp to u8 — alignment shifts above 63 are nonsensical.
+        // Clamp to u8 - alignment shifts above 63 are nonsensical.
         // Defensive: we never index by this value, just surface it.
         (alignment_raw & 0xff) as u8
     };

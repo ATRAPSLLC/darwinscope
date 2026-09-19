@@ -3,29 +3,29 @@
 //! Walks every reflection section the Swift runtime emits into a
 //! Mach-O image:
 //!
-//! - `__TEXT,__swift5_types` — i32-relative pointer array of
+//! - `__TEXT,__swift5_types` - i32-relative pointer array of
 //!   [`TypeDescriptor`]s (`TargetTypeContextDescriptor` per
 //!   `swift/include/swift/ABI/Metadata.h:4025-4138`). Class / struct
 //!   / enum kinds; per-kind tail decoders surface vtable, override
 //!   table, resilient superclass, foreign / singleton metadata
 //!   initialisation, prespecialisations, invertible protocols, and
 //!   singleton-metadata-pointer trailing objects.
-//! - `__TEXT,__swift5_protos` — i32-relative pointer array of
+//! - `__TEXT,__swift5_protos` - i32-relative pointer array of
 //!   [`SwiftProtocol`]s (`TargetProtocolDescriptor`).
-//! - `__TEXT,__swift5_proto` — packed array of [`Conformance`] rows
+//! - `__TEXT,__swift5_proto` - packed array of [`Conformance`] rows
 //!   (`TargetProtocolConformanceDescriptor`). Resolves the
 //!   `(type_descriptor, protocol_descriptor, witness_table, flags)`
 //!   triple per [`crate::swift::ConformanceFlags`].
-//! - `__TEXT,__swift5_fieldmd` — variable-length sequence of
+//! - `__TEXT,__swift5_fieldmd` - variable-length sequence of
 //!   [`FieldDescriptor`]s, each carrying `NumFields` x
 //!   [`FieldRecord`] entries (mangled type name + reflstr-hosted
 //!   field name).
-//! - `__TEXT,__swift5_replac` / `__swift5_replac2` —
+//! - `__TEXT,__swift5_replac` / `__swift5_replac2` -
 //!   dynamic-replacement scope descriptors / chain entries.
-//! - `__TEXT,__swift5_capture` — closure-capture descriptors.
-//! - `__TEXT,__swift5_reflstr` — pool of NUL-terminated UTF-8 names
+//! - `__TEXT,__swift5_capture` - closure-capture descriptors.
+//! - `__TEXT,__swift5_reflstr` - pool of NUL-terminated UTF-8 names
 //!   referenced by [`FieldRecord::field_name`].
-//! - `__TEXT,__swift5_typeref` / `__swift5_builtin` — mangled type
+//! - `__TEXT,__swift5_typeref` / `__swift5_builtin` - mangled type
 //!   reference pool / builtin-type layout records (presence-only).
 //!
 //! All names are stored in their **mangled** form. The schema
@@ -33,18 +33,18 @@
 //!
 //! See `RESEARCH.md` §"Swift type metadata" (lines 1696-2480) for
 //! layout references. Section name synonyms are catalogued in
-//! `RESEARCH.md` §"Section-name catalogue" — the lookup is
+//! `RESEARCH.md` §"Section-name catalogue" - the lookup is
 //! segment-agnostic on purpose.
 //!
 //! ## Lifetime convention
 //!
-//! Every typed view here uses `<'a, 'p>` — `'a` is the data slice
+//! Every typed view here uses `<'a, 'p>` - `'a` is the data slice
 //! lifetime (where mangled names, field strings, and section bodies
 //! live) and `'p` is the borrow of the parent [`SwiftRuntime`]. Swift
 //! string fields all live in `__TEXT,__swift5_reflstr` /
 //! `__swift5_typeref` / type-descriptor-local string blobs and are
 //! addressable through [`MachoBinary::raw`], so `&'a str` is the
-//! correct name lifetime — matching the [`crate::objc::ObjcRuntime`]
+//! correct name lifetime - matching the [`crate::objc::ObjcRuntime`]
 //! convention.
 //!
 //! [`MachoBinary`]: crate::binary::MachoBinary
@@ -53,7 +53,7 @@
 //! ## Fail-soft posture
 //!
 //! [`MachoBinary::swift`](crate::binary::MachoBinary::swift) returns
-//! `None` when the image carries no Swift content — concretely, when
+//! `None` when the image carries no Swift content - concretely, when
 //! none of `__swift5_types`, `__swift5_protos`, `__swift5_proto`,
 //! `__swift5_fieldmd` is present. A reflection-stripped Swift binary
 //! that ships only conformances still produces `Some(_)`.
@@ -133,7 +133,7 @@ pub(crate) use section::{SwiftSection, find_swift_section};
 pub struct SwiftRuntime<'a> {
     pub(crate) data: &'a [u8],
     /// Cached `(vmaddr, vmsize, fileoff, filesize)` tuples for every
-    /// segment with non-zero file backing — the input to
+    /// segment with non-zero file backing - the input to
     /// [`vm_to_file_offset_in`]. Kept by value so the runtime
     /// outlives the originating [`MachoBinary`] borrow.
     pub(crate) segments: Vec<(u64, u64, u64, u64)>,
@@ -145,13 +145,13 @@ pub struct SwiftRuntime<'a> {
     pub(crate) replac: Option<SwiftSection<'a>>,
     pub(crate) replac2: Option<SwiftSection<'a>>,
     pub(crate) capture: Option<SwiftSection<'a>>,
-    /// `__swift5_reflstr` — pool of NUL-terminated UTF-8 reflection
+    /// `__swift5_reflstr` - pool of NUL-terminated UTF-8 reflection
     /// strings. Field-name resolution falls back here when the
     /// primary segment-table lookup fails (forward-compat for
     /// linker variants that emit reflstr outside the standard
     /// `__TEXT` placement).
     pub(crate) reflstr: Option<SwiftSection<'a>>,
-    /// `__swift5_typeref` — mangled-name pool. Reserved for
+    /// `__swift5_typeref` - mangled-name pool. Reserved for
     /// future use; presence is surfaced via the section-discovery
     /// path.
     #[allow(dead_code)]
@@ -184,14 +184,14 @@ impl<'a> SwiftRuntime<'a> {
     ///   walker to 64-bit Mach-O; 32-bit slices return `None` here
     ///   so the caller can record a single skip-with-reason event
     ///   without having to inspect every accessor.
-    /// - The image carries no Swift content — concretely, none of
+    /// - The image carries no Swift content - concretely, none of
     ///   `__swift5_types`, `__swift5_protos`, `__swift5_proto`, or
     ///   `__swift5_fieldmd` is present. Reflection-stripped images
     ///   that ship only conformances still produce `Some(_)`.
     pub(crate) fn build(bin: &MachoBinary<'a>) -> Option<Self> {
         if !bin.header().is_64() {
             #[cfg(feature = "tracing")]
-            tracing::debug!("darwinscope::swift: 32-bit Mach-O — Swift walker is 64-bit only");
+            tracing::debug!("darwinscope::swift: 32-bit Mach-O - Swift walker is 64-bit only");
             return None;
         }
 
@@ -200,7 +200,7 @@ impl<'a> SwiftRuntime<'a> {
         let proto = find_swift_section(bin, "__swift5_proto");
         let fieldmd = find_swift_section(bin, "__swift5_fieldmd");
 
-        // Detector union — any of the four "load-bearing" Swift
+        // Detector union - any of the four "load-bearing" Swift
         // sections counts as Swift content. A binary can be stripped
         // of fieldmd reflection but still carry types + conformances;
         // a third-party library can ship only conformances against
@@ -217,7 +217,7 @@ impl<'a> SwiftRuntime<'a> {
 
         // Index every bind site by slot VA. Foreign-class type
         // references in conformances resolve through this map.
-        // Re-borrow into the data lifetime — names live in
+        // Re-borrow into the data lifetime - names live in
         // `__LINKEDIT` / `LC_SYMTAB.stroff`, both of which are
         // addressable through `bin.raw()`.
         let mut binds_by_va: HashMap<u64, (&'a str, &'a str)> = HashMap::new();
@@ -260,7 +260,7 @@ impl<'a> SwiftRuntime<'a> {
     }
 
     /// Iterator over every type context descriptor in
-    /// `__swift5_types` — class, struct, enum, plus any other kind
+    /// `__swift5_types` - class, struct, enum, plus any other kind
     /// surfaced as [`ContextDescriptorKind::Other`].
     pub fn types(&self) -> TypeIter<'a, '_> {
         TypeIter::new(self)
@@ -303,7 +303,7 @@ impl<'a> SwiftRuntime<'a> {
     }
 
     /// `true` when the image carries an `__swift5_builtin` section.
-    /// Presence-only — the structured walker is post-v0.1.
+    /// Presence-only - the structured walker is post-v0.1.
     pub fn has_builtin_descriptors(&self) -> bool {
         self.builtin.is_some()
     }
@@ -379,7 +379,7 @@ impl<'a> SwiftRuntime<'a> {
     /// `slot_va` to its canonical target VA.
     ///
     /// Most Swift descriptor pointers are i32-relative and don't
-    /// reach this function — they're resolved via
+    /// reach this function - they're resolved via
     /// [`crate::util::relative_pointer`]. Absolute slots (the rare
     /// dynamic-replacement caches and `IndirectTypeDescriptor` /
     /// `IndirectObjCClass` slots) go through the chained-fixup

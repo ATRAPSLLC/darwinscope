@@ -59,7 +59,7 @@ fn chained_fixups_absent_on_legacy_arm64() {
     let bin = MachoBinary::parse(&bytes).unwrap();
     assert!(
         bin.chained_fixups().is_none(),
-        "hello-arm64-legacy uses LC_DYLD_INFO_ONLY — no chained-fixup header"
+        "hello-arm64-legacy uses LC_DYLD_INFO_ONLY - no chained-fixup header"
     );
 }
 

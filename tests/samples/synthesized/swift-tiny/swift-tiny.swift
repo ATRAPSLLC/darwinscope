@@ -1,7 +1,7 @@
 // Source for the `swift-tiny` Tier-1 synthesized fixture.
 //
 // Exercises every Swift 5 metadata section the Stage 5 walker
-// covers — see `SAMPLES.md:159-184` and `ToDo.md` Stage 5.
+// covers - see `SAMPLES.md:159-184` and `ToDo.md` Stage 5.
 //
 // One protocol, one struct conforming to it, one class with a
 // stored mutable property and a method (vtable entry source), one

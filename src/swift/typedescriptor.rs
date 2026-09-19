@@ -56,7 +56,7 @@ use crate::{
 /// Byte offset of the per-kind tail relative to the descriptor base.
 const TYPE_DESCRIPTOR_BASE_SIZE: u64 = 20;
 
-/// One Swift type context descriptor — class, struct, or enum.
+/// One Swift type context descriptor - class, struct, or enum.
 ///
 /// Cite: `swift/include/swift/ABI/Metadata.h:4025-4138`
 /// (`TargetTypeContextDescriptor` and its three subclasses
@@ -66,7 +66,7 @@ const TYPE_DESCRIPTOR_BASE_SIZE: u64 = 20;
 /// One descriptor is emitted per nominal type the source module
 /// declares; `__swift5_types` is an array of i32-relative pointers
 /// to them. The descriptor carries the static metadata Swift's
-/// runtime needs to materialise the type at runtime — generic
+/// runtime needs to materialise the type at runtime - generic
 /// instantiation, vtable layout for classes, payload layout for
 /// enums, etc. Mirror reflection (`Mirror(reflecting:)`) walks the
 /// same descriptors at runtime that `darwinscope` walks statically.
@@ -104,23 +104,23 @@ pub struct TypeDescriptor<'a, 'p> {
 ///   8-bit payload-size offset.
 ///
 /// `NonType` covers descriptors that *appeared* in `__swift5_types`
-/// but whose kind tag isn't one of the three nominal kinds — the
+/// but whose kind tag isn't one of the three nominal kinds - the
 /// emitter is being lenient with the section, so this surface
 /// preserves them rather than rejecting the binary.
 #[derive(Debug, Clone)]
 pub enum TypeKindBody<'a> {
-    /// `TargetClassDescriptor` (kind=`Class`) tail body — 44-byte
+    /// `TargetClassDescriptor` (kind=`Class`) tail body - 44-byte
     /// total descriptor.
     Class(ClassBody<'a>),
-    /// `TargetStructDescriptor` (kind=`Struct`) tail body — 28-byte
+    /// `TargetStructDescriptor` (kind=`Struct`) tail body - 28-byte
     /// total descriptor.
     Struct(StructBody),
-    /// `TargetEnumDescriptor` (kind=`Enum`) tail body — 28-byte
+    /// `TargetEnumDescriptor` (kind=`Enum`) tail body - 28-byte
     /// total descriptor.
     Enum(EnumBody),
     /// Non-type kinds (Module / Extension / Anonymous / Protocol /
     /// OpaqueType / Other). The descriptor was found in
-    /// `__swift5_types` but its kind tag is non-type — surfaced as
+    /// `__swift5_types` but its kind tag is non-type - surfaced as
     /// fail-soft rather than rejecting the row.
     NonType,
 }
@@ -244,7 +244,7 @@ pub struct EnumBody {
     pub singleton_metadata_pointer_va: Option<u64>,
 }
 
-/// `TargetVTableDescriptorHeader` — class vtable trailing block.
+/// `TargetVTableDescriptorHeader` - class vtable trailing block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VTableHeader {
     /// `VTableOffset` (in metadata words).
@@ -255,7 +255,7 @@ pub struct VTableHeader {
     pub entries_va: u64,
 }
 
-/// `TargetOverrideTableHeader` — class method-override trailing block.
+/// `TargetOverrideTableHeader` - class method-override trailing block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OverrideTableHeader {
     /// `NumEntries`.
@@ -264,7 +264,7 @@ pub struct OverrideTableHeader {
     pub entries_va: u64,
 }
 
-/// `TargetMethodDefaultOverrideTableHeader` — protocol-default
+/// `TargetMethodDefaultOverrideTableHeader` - protocol-default
 /// override trailing block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DefaultOverrideTableHeader {
@@ -275,7 +275,7 @@ pub struct DefaultOverrideTableHeader {
 }
 
 impl<'a, 'p> TypeDescriptor<'a, 'p> {
-    /// Owning [`SwiftRuntime`] borrow — re-exposed so per-kind
+    /// Owning [`SwiftRuntime`] borrow - re-exposed so per-kind
     /// accessors that build follow-on iterators (vtable, parent
     /// chain) can plumb it without dragging extra parameters.
     pub fn runtime(&self) -> &'p SwiftRuntime<'a> {
@@ -498,7 +498,7 @@ impl<'a, 'p> TypeDescriptor<'a, 'p> {
     /// vector* embedded in the type metadata at
     /// `metadata + FieldOffsetVectorOffset * sizeof(void*)`; for a struct each
     /// entry is a `uint32_t`. This is only readable from the file when the
-    /// type's complete metadata is emitted statically — i.e. the singleton
+    /// type's complete metadata is emitted statically - i.e. the singleton
     /// metadata pointer resolves to a non-zero VA. Generic / resilient /
     /// lazily-initialised types compute their layout at runtime and leave the
     /// metadata pointer relative-offset zero; for those this returns [`None`]
@@ -620,7 +620,7 @@ impl<'a, 'p> Iterator for TypeIter<'a, 'p> {
             // Fail-soft: skip rows that fail to resolve.
             #[cfg(feature = "tracing")]
             tracing::debug!(
-                "darwinscope::swift: type descriptor at 0x{:x} (slot 0x{:x}) skipped — decode failed",
+                "darwinscope::swift: type descriptor at 0x{:x} (slot 0x{:x}) skipped - decode failed",
                 descriptor_va,
                 slot_va,
             );

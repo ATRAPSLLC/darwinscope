@@ -18,7 +18,7 @@
 //! 24 bytes header. Trailing arrays
 //! (`TargetGenericRequirementDescriptor[NumRequirementsInSignature]`,
 //! `TargetProtocolRequirement[NumRequirements]`) live past the
-//! header — counts are surfaced verbatim, structured decode of the
+//! header - counts are surfaced verbatim, structured decode of the
 //! requirement tables is post-v0.1.
 
 use crate::{
@@ -65,13 +65,13 @@ impl<'a, 'p> SwiftProtocol<'a, 'p> {
         self.name
     }
 
-    /// `NumRequirementsInSignature` — generic requirement count in
+    /// `NumRequirementsInSignature` - generic requirement count in
     /// the protocol's requirement signature.
     pub fn num_requirements_in_signature(&self) -> u32 {
         self.num_requirements_in_signature
     }
 
-    /// `NumRequirements` — total protocol-method requirement count.
+    /// `NumRequirements` - total protocol-method requirement count.
     pub fn num_requirements(&self) -> u32 {
         self.num_requirements
     }

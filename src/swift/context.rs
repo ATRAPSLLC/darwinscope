@@ -3,32 +3,32 @@
 //! Decodes the bitfield layouts that govern every `__swift5_*`
 //! descriptor: kind enum + per-kind flag words for type contexts,
 //! protocol descriptors, conformances, fields, and method
-//! descriptors. Pure value types — no allocation, no I/O — so the
+//! descriptors. Pure value types - no allocation, no I/O - so the
 //! descriptor walkers can build them on demand from the raw `u32`
 //! payload they read off disk.
 //!
 //! References used throughout:
 //!
 //! - `swift/include/swift/ABI/MetadataValues.h:1815-1846`
-//!   — `ContextDescriptorKind` (5-bit enum).
+//!   - `ContextDescriptorKind` (5-bit enum).
 //! - `swift/include/swift/ABI/MetadataValues.h:1848-1929`
-//!   — `ContextDescriptorFlags` (32-bit common header).
+//!   - `ContextDescriptorFlags` (32-bit common header).
 //! - `swift/include/swift/ABI/MetadataValues.h:1933-2008`
-//!   — `TypeContextDescriptorFlags` (16-bit kind-specific block).
+//!   - `TypeContextDescriptorFlags` (16-bit kind-specific block).
 //! - `swift/include/swift/ABI/MetadataValues.h:749-882`
-//!   — `ConformanceFlags`.
+//!   - `ConformanceFlags`.
 //! - `swift/include/swift/RemoteInspection/Records.h:32-83`
-//!   — `FieldRecordFlags`.
+//!   - `FieldRecordFlags`.
 //! - `swift/include/swift/RemoteInspection/Records.h:146-174`
-//!   — `FieldDescriptorKind`.
+//!   - `FieldDescriptorKind`.
 //! - `swift/include/swift/ABI/MetadataValues.h` `TypeReferenceKind`.
 //! - `swift/include/swift/ABI/MetadataValues.h:381-…`
-//!   — `MethodDescriptorFlags`.
+//!   - `MethodDescriptorFlags`.
 //!
 //! All citations also surface in `RESEARCH.md` §"Swift type
 //! metadata" (lines 1725-2085).
 
-/// `ContextDescriptorKind` — the 5-bit kind enum stored in the low
+/// `ContextDescriptorKind` - the 5-bit kind enum stored in the low
 /// bits of every [`ContextDescriptorFlags`] payload.
 ///
 /// Cite: `swift/include/swift/ABI/MetadataValues.h:1815-1846` and
@@ -53,7 +53,7 @@ pub enum ContextDescriptorKind {
     /// Swift `enum`. Kind value `0x12`.
     Enum,
     /// Kind values outside the documented set (5..15, 19..31). Held
-    /// verbatim — newer Swift releases occasionally add experimental
+    /// verbatim - newer Swift releases occasionally add experimental
     /// kinds and the walker fail-soft surfaces them rather than
     /// rejecting the descriptor.
     Other(u8),
@@ -77,7 +77,7 @@ impl ContextDescriptorKind {
     }
 
     /// `true` for kinds that carry a `TargetTypeContextDescriptor`
-    /// payload — i.e. `Class`, `Struct`, or `Enum`. Walkers use
+    /// payload - i.e. `Class`, `Struct`, or `Enum`. Walkers use
     /// this to gate the per-kind tail-decoders.
     pub fn is_type(self) -> bool {
         matches!(self, Self::Class | Self::Struct | Self::Enum)
@@ -126,7 +126,7 @@ impl ContextDescriptorFlags {
         (self.0 & (1 << 7)) != 0
     }
 
-    /// High 16 bits — the kind-specific flag block. For type kinds
+    /// High 16 bits - the kind-specific flag block. For type kinds
     /// (`Class`, `Struct`, `Enum`) decode through
     /// [`TypeContextDescriptorFlags`].
     pub fn kind_specific(self) -> u16 {
@@ -152,7 +152,7 @@ pub enum MetadataInitializationKind {
     Singleton,
     /// Trailing `TargetForeignMetadataInitialization` payload.
     Foreign,
-    /// Reserved value `3` — surfaced verbatim.
+    /// Reserved value `3` - surfaced verbatim.
     Other,
 }
 
@@ -191,17 +191,17 @@ impl MetadataInitializationKind {
 pub struct TypeContextDescriptorFlags(pub u16);
 
 impl TypeContextDescriptorFlags {
-    /// Bits `0..1` — metadata initialisation strategy.
+    /// Bits `0..1` - metadata initialisation strategy.
     pub fn metadata_initialization(self) -> MetadataInitializationKind {
         MetadataInitializationKind::from_bits((self.0 & 0x3) as u8)
     }
 
-    /// Bit `2` — `HasImportInfo`. Trailing module-import info present.
+    /// Bit `2` - `HasImportInfo`. Trailing module-import info present.
     pub fn has_import_info(self) -> bool {
         (self.0 & (1 << 2)) != 0
     }
 
-    /// Bit `3` — `HasCanonicalMetadataPrespecializations`
+    /// Bit `3` - `HasCanonicalMetadataPrespecializations`
     /// **or** `HasSingletonMetadataPointer` depending on context.
     /// Walkers use [`Self::has_singleton_metadata_pointer`] /
     /// [`Self::has_canonical_metadata_prespecializations`] to gate
@@ -232,53 +232,53 @@ impl TypeContextDescriptorFlags {
             )
     }
 
-    /// Bit `4` — `HasLayoutString`.
+    /// Bit `4` - `HasLayoutString`.
     pub fn has_layout_string(self) -> bool {
         (self.0 & (1 << 4)) != 0
     }
 
-    /// Bit `6` — `Class_HasDefaultOverrideTable`.
+    /// Bit `6` - `Class_HasDefaultOverrideTable`.
     pub fn class_has_default_override_table(self) -> bool {
         (self.0 & (1 << 6)) != 0
     }
 
-    /// Bit `7` — `Class_IsActor`.
+    /// Bit `7` - `Class_IsActor`.
     pub fn class_is_actor(self) -> bool {
         (self.0 & (1 << 7)) != 0
     }
 
-    /// Bit `8` — `Class_IsDefaultActor`.
+    /// Bit `8` - `Class_IsDefaultActor`.
     pub fn class_is_default_actor(self) -> bool {
         (self.0 & (1 << 8)) != 0
     }
 
-    /// Bits `9..11` — `Class_ResilientSuperclassReferenceKind`.
+    /// Bits `9..11` - `Class_ResilientSuperclassReferenceKind`.
     pub fn class_resilient_superclass_reference_kind(self) -> TypeReferenceKind {
         TypeReferenceKind::from_bits(((self.0 >> 9) & 0x7) as u8)
     }
 
-    /// Bit `12` — `Class_AreImmediateMembersNegative`.
+    /// Bit `12` - `Class_AreImmediateMembersNegative`.
     pub fn class_immediate_members_negative(self) -> bool {
         (self.0 & (1 << 12)) != 0
     }
 
-    /// Bit `13` — `Class_HasResilientSuperclass`.
+    /// Bit `13` - `Class_HasResilientSuperclass`.
     pub fn class_has_resilient_superclass(self) -> bool {
         (self.0 & (1 << 13)) != 0
     }
 
-    /// Bit `14` — `Class_HasOverrideTable`.
+    /// Bit `14` - `Class_HasOverrideTable`.
     pub fn class_has_override_table(self) -> bool {
         (self.0 & (1 << 14)) != 0
     }
 
-    /// Bit `15` — `Class_HasVTable`.
+    /// Bit `15` - `Class_HasVTable`.
     pub fn class_has_vtable(self) -> bool {
         (self.0 & (1 << 15)) != 0
     }
 }
 
-/// `TypeReferenceKind` — the 3-bit tag stored in
+/// `TypeReferenceKind` - the 3-bit tag stored in
 /// [`ConformanceFlags`] bits `3..5` and in the class-resilient-
 /// superclass reference field.
 ///
@@ -298,7 +298,7 @@ pub enum TypeReferenceKind {
     /// Indirect: relative pointer to a slot containing the Obj-C
     /// class object pointer.
     IndirectObjCClass,
-    /// Reserved value (4..7) — surfaced verbatim.
+    /// Reserved value (4..7) - surfaced verbatim.
     Other(u8),
 }
 
@@ -336,53 +336,53 @@ impl TypeReferenceKind {
 pub struct ConformanceFlags(pub u32);
 
 impl ConformanceFlags {
-    /// Bits `3..5` — interpretation tag for `TypeRef`.
+    /// Bits `3..5` - interpretation tag for `TypeRef`.
     pub fn type_reference_kind(self) -> TypeReferenceKind {
         TypeReferenceKind::from_bits(((self.0 >> 3) & 0x7) as u8)
     }
 
-    /// Bit `6` — `IsRetroactive` (conformance defined in a third
+    /// Bit `6` - `IsRetroactive` (conformance defined in a third
     /// module, neither type nor protocol owner).
     pub fn is_retroactive(self) -> bool {
         (self.0 & (1 << 6)) != 0
     }
 
-    /// Bit `7` — `IsSynthesizedNonUnique` (compiler-emitted for an
+    /// Bit `7` - `IsSynthesizedNonUnique` (compiler-emitted for an
     /// imported entity).
     pub fn is_synthesized_non_unique(self) -> bool {
         (self.0 & (1 << 7)) != 0
     }
 
-    /// Bits `8..15` — number of trailing
+    /// Bits `8..15` - number of trailing
     /// `TargetGenericRequirementDescriptor` entries when the
     /// conformance is conditional.
     pub fn num_conditional_requirements(self) -> u8 {
         ((self.0 >> 8) & 0xff) as u8
     }
 
-    /// Bit `16` — `HasResilientWitnesses`.
+    /// Bit `16` - `HasResilientWitnesses`.
     pub fn has_resilient_witnesses(self) -> bool {
         (self.0 & (1 << 16)) != 0
     }
 
-    /// Bit `17` — `HasGenericWitnessTable`.
+    /// Bit `17` - `HasGenericWitnessTable`.
     pub fn has_generic_witness_table(self) -> bool {
         (self.0 & (1 << 17)) != 0
     }
 
-    /// Bit `18` — `IsConformanceOfProtocol` (protocol-to-protocol
+    /// Bit `18` - `IsConformanceOfProtocol` (protocol-to-protocol
     /// conformance synthesised for inheritance).
     pub fn is_conformance_of_protocol(self) -> bool {
         (self.0 & (1 << 18)) != 0
     }
 
-    /// Bit `19` — `HasGlobalActorIsolation` (trailing
+    /// Bit `19` - `HasGlobalActorIsolation` (trailing
     /// `TargetGlobalActorReference` payload present).
     pub fn has_global_actor_isolation(self) -> bool {
         (self.0 & (1 << 19)) != 0
     }
 
-    /// Bits `24..31` — number of trailing
+    /// Bits `24..31` - number of trailing
     /// `GenericPackShapeDescriptor` entries when conditional pack
     /// requirements are present.
     pub fn num_conditional_pack_descriptors(self) -> u8 {
@@ -390,7 +390,7 @@ impl ConformanceFlags {
     }
 }
 
-/// `FieldDescriptorKind` (`uint16_t`) — disambiguates the role of a
+/// `FieldDescriptorKind` (`uint16_t`) - disambiguates the role of a
 /// `TargetFieldDescriptor` entry in `__swift5_fieldmd`.
 ///
 /// Cite: `swift/include/swift/RemoteInspection/Records.h:146-174`
@@ -433,7 +433,7 @@ impl FieldDescriptorKind {
     }
 }
 
-/// `FieldRecordFlags` (32-bit) — per-record flag word in a
+/// `FieldRecordFlags` (32-bit) - per-record flag word in a
 /// [`crate::swift::FieldRecord`].
 ///
 /// Cite: `swift/include/swift/RemoteInspection/Records.h:32-83` and
@@ -442,25 +442,25 @@ impl FieldDescriptorKind {
 pub struct FieldRecordFlags(pub u32);
 
 impl FieldRecordFlags {
-    /// Bit `0` — `IsIndirectCase`. The enum case is `indirect`
+    /// Bit `0` - `IsIndirectCase`. The enum case is `indirect`
     /// (heap-boxed).
     pub fn is_indirect_case(self) -> bool {
         (self.0 & (1 << 0)) != 0
     }
 
-    /// Bit `1` — `IsVar`. Mutable `var` property (vs `let`).
+    /// Bit `1` - `IsVar`. Mutable `var` property (vs `let`).
     pub fn is_var(self) -> bool {
         (self.0 & (1 << 1)) != 0
     }
 
-    /// Bit `2` — `IsArtificial`. Compiler-generated field (e.g.
+    /// Bit `2` - `IsArtificial`. Compiler-generated field (e.g.
     /// `_storage` for resilient classes).
     pub fn is_artificial(self) -> bool {
         (self.0 & (1 << 2)) != 0
     }
 }
 
-/// `MethodKind` — enum stored in the low 4 bits of
+/// `MethodKind` - enum stored in the low 4 bits of
 /// [`MethodDescriptorFlags`]. Disambiguates the dispatch role of a
 /// vtable entry.
 ///
@@ -498,7 +498,7 @@ impl SwiftMethodKind {
     }
 }
 
-/// 32-bit `MethodDescriptorFlags` — flag word on each
+/// 32-bit `MethodDescriptorFlags` - flag word on each
 /// `TargetMethodDescriptor` and `TargetMethodOverrideDescriptor`.
 ///
 /// Cite: `swift/include/swift/ABI/MetadataValues.h` (search
@@ -516,33 +516,33 @@ impl SwiftMethodKind {
 pub struct MethodDescriptorFlags(pub u32);
 
 impl MethodDescriptorFlags {
-    /// Low 4 bits — dispatch kind.
+    /// Low 4 bits - dispatch kind.
     pub fn kind(self) -> SwiftMethodKind {
         SwiftMethodKind::from_bits((self.0 & 0xF) as u8)
     }
 
-    /// Bit `4` — `IsInstance`.
+    /// Bit `4` - `IsInstance`.
     pub fn is_instance(self) -> bool {
         (self.0 & (1 << 4)) != 0
     }
 
-    /// Bit `5` — `IsDynamic` (eligible for dynamic replacement).
+    /// Bit `5` - `IsDynamic` (eligible for dynamic replacement).
     pub fn is_dynamic(self) -> bool {
         (self.0 & (1 << 5)) != 0
     }
 
-    /// Bit `6` — `IsAsync`.
+    /// Bit `6` - `IsAsync`.
     pub fn is_async(self) -> bool {
         (self.0 & (1 << 6)) != 0
     }
 
-    /// Bit `7` — `HasExtendedContext` (additional method-context
+    /// Bit `7` - `HasExtendedContext` (additional method-context
     /// payload follows).
     pub fn has_extended_context(self) -> bool {
         (self.0 & (1 << 7)) != 0
     }
 
-    /// Bits `16..31` — PAC discriminator used to sign the Impl
+    /// Bits `16..31` - PAC discriminator used to sign the Impl
     /// pointer at runtime.
     pub fn extra_discriminator(self) -> u16 {
         (self.0 >> 16) as u16

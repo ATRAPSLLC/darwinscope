@@ -35,7 +35,7 @@ use crate::{
     util::{read_u32_le_at, read_u64_le_at},
 };
 
-/// Minimum on-disk size of a `protocol_t` — through `flags`.
+/// Minimum on-disk size of a `protocol_t` - through `flags`.
 const PROTOCOL_BASE_SIZE: usize = 72;
 
 /// Offset of the `_extendedMethodTypes` trailing field.
@@ -55,7 +55,7 @@ const PROTOCOL_FIELD_CLASS_PROPERTIES_OFFSET: u32 = 88;
 /// `class_ro_t.baseProtocols` lists.
 ///
 /// Trailing fields (`_extendedMethodTypes`, `_demangledName`,
-/// `_classProperties`) are gated on the `size` word — older
+/// `_classProperties`) are gated on the `size` word - older
 /// compilers may emit a shorter struct that ends at `flags`. The
 /// view exposes them via `Option`-returning accessors so consumers
 /// do not have to special-case the size check.
@@ -87,7 +87,7 @@ impl<'a, 'p> ObjcProtocol<'a, 'p> {
         self.name
     }
 
-    /// `protocol_t.size` — gates the trailing fields.
+    /// `protocol_t.size` - gates the trailing fields.
     pub fn size(&self) -> u32 {
         self.size
     }
@@ -122,7 +122,7 @@ impl<'a, 'p> ObjcProtocol<'a, 'p> {
         property_list_iter(self.rt, self.instance_properties_va)
     }
 
-    /// Class properties — only meaningful when [`Self::size`] is
+    /// Class properties - only meaningful when [`Self::size`] is
     /// large enough to include the trailing field. Returns an empty
     /// iterator when the field is not present.
     pub fn class_properties(&self) -> PropertyIter<'a, 'p> {
@@ -178,7 +178,7 @@ impl<'a, 'p> Iterator for ProtocolIter<'a, 'p> {
             }
             #[cfg(feature = "tracing")]
             tracing::debug!(
-                "darwinscope::objc: protocol at 0x{:x} (slot idx={}) skipped — decode failed",
+                "darwinscope::objc: protocol at 0x{:x} (slot idx={}) skipped - decode failed",
                 proto_va,
                 slot_idx,
             );
@@ -193,7 +193,7 @@ pub(crate) fn decode_protocol<'a, 'p>(
     proto_va: u64,
 ) -> Option<ObjcProtocol<'a, 'p>> {
     let bytes = rt.read_bytes(proto_va, PROTOCOL_BASE_SIZE)?;
-    // Slot 0 is `isa` — typically null on disk; we don't surface
+    // Slot 0 is `isa` - typically null on disk; we don't surface
     // it but reading the bytes confirms the struct fits.
     let name_va = rt.resolve_pointer(proto_va.checked_add(8)?)?;
     let protocols_va = rt.resolve_pointer(proto_va.checked_add(16)?).unwrap_or(0);

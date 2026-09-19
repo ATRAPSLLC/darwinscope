@@ -32,7 +32,7 @@ use crate::{
 ///
 /// Each entry is exactly 8 bytes on disk: a `u32` `Flags` word
 /// followed by a 4-byte i32 relative pointer to the implementation.
-/// Swift class vtables are append-only — subclasses extend rather
+/// Swift class vtables are append-only - subclasses extend rather
 /// than replace the parent's vtable, and override-table entries
 /// (decoded as [`OverrideEntry`] / [`DefaultOverrideEntry`])
 /// re-target individual slots without changing the layout.
@@ -45,13 +45,13 @@ use crate::{
 pub struct VTableEntry {
     /// VA of the descriptor (start of the 8-byte entry on disk).
     pub address: u64,
-    /// Decoded `MethodDescriptorFlags` — kind tag (Method / Init /
+    /// Decoded `MethodDescriptorFlags` - kind tag (Method / Init /
     /// Getter / Setter / etc.), `IsInstance` bit, dynamic-dispatch
     /// flags. See [`MethodDescriptorFlags`] for the full layout.
     pub flags: MethodDescriptorFlags,
     /// `Impl` target VA, resolved from the i32 relative pointer.
     /// `0` when the entry has no implementation (abstract vtable
-    /// slot — typically protocol-method declaration that conforming
+    /// slot - typically protocol-method declaration that conforming
     /// classes fill in at runtime).
     pub impl_va: u64,
 }

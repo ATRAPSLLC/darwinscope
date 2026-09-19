@@ -58,13 +58,13 @@ fn non_swift_binary_yields_none() {
     let bin = MachoBinary::parse(&bytes).unwrap();
     assert!(
         bin.swift().is_none(),
-        "hello-arm64 carries no Swift sections — swift() must return None"
+        "hello-arm64 carries no Swift sections - swift() must return None"
     );
 }
 
 #[test]
 fn objc_only_binary_yields_none() {
-    // objc-tiny is a pure Objective-C binary — no __swift5_* sections
+    // objc-tiny is a pure Objective-C binary - no __swift5_* sections
     // even though Swift-stable Obj-C images may set bits in
     // __objc_imageinfo's Swift version field. Guard against false
     // positives.
@@ -72,7 +72,7 @@ fn objc_only_binary_yields_none() {
     let bin = MachoBinary::parse(&bytes).unwrap();
     assert!(
         bin.swift().is_none(),
-        "objc-tiny has no __swift5_* — swift() must return None"
+        "objc-tiny has no __swift5_* - swift() must return None"
     );
 }
 
@@ -210,7 +210,7 @@ fn swift_runtime_works_on_x86_64_slice() {
     assert!(names.contains(&"Counter".to_owned()), "names: {:?}", names);
     assert!(names.contains(&"Mood".to_owned()), "names: {:?}", names);
 
-    // Counter still has a vtable on x86_64 — pointer authentication
+    // Counter still has a vtable on x86_64 - pointer authentication
     // is arm64e-only but the descriptor layout is identical.
     let counter = rt.types().find(|d| d.name() == "Counter").unwrap();
     let vt: Vec<_> = counter.vtable().unwrap().collect();
@@ -351,7 +351,7 @@ fn dynamic_replacements_iter_safe_when_absent() {
     let bytes = read(SWIFT_TINY_ARM64);
     let bin = MachoBinary::parse(&bytes).unwrap();
     let rt = bin.swift().unwrap();
-    // swift-tiny ships no __swift5_replac — iterator must yield 0
+    // swift-tiny ships no __swift5_replac - iterator must yield 0
     // entries cleanly without panic.
     let count = rt.dynamic_replacements().count();
     assert_eq!(count, 0);
@@ -387,7 +387,7 @@ fn class_has_vtable_for_counter() {
         "Counter has at least one vtable entry (init/deinit + bump())"
     );
 
-    // Every entry should resolve a non-zero impl address — these
+    // Every entry should resolve a non-zero impl address - these
     // are concrete, not abstract.
     for e in &entries {
         assert_ne!(
@@ -415,13 +415,13 @@ fn class_vtable_kinds_cover_dispatch_roles() {
     // Every entry's kind must decode cleanly. swift-tiny's Counter
     // has only an instance method and an initializer. We don't pin
     // exact counts because Swift may emit deinit / synthesised
-    // members — just assert the kinds are recognised.
+    // members - just assert the kinds are recognised.
     let bytes = read(SWIFT_TINY_ARM64);
     let bin = MachoBinary::parse(&bytes).unwrap();
     let rt = bin.swift().unwrap();
     let counter = rt.types().find(|d| d.name() == "Counter").unwrap();
     for e in counter.vtable().unwrap() {
-        // Kind is one of the documented variants — `Other` would
+        // Kind is one of the documented variants - `Other` would
         // mean an unrecognised value, which we want to know about.
         match e.kind() {
             SwiftMethodKind::Method
@@ -443,7 +443,7 @@ fn override_table_iter_safe_when_absent() {
     let bin = MachoBinary::parse(&bytes).unwrap();
     let rt = bin.swift().unwrap();
     let counter = rt.types().find(|d| d.name() == "Counter").unwrap();
-    // Counter is a root class — no overrides.
+    // Counter is a root class - no overrides.
     assert!(counter.override_table().is_none());
     assert!(counter.default_override_table().is_none());
 }
@@ -490,7 +490,7 @@ fn foreign_and_singleton_init_safe_when_absent() {
     let bin = MachoBinary::parse(&bytes).unwrap();
     let rt = bin.swift().unwrap();
     for d in rt.types() {
-        // swift-tiny types are non-resilient + non-foreign — the
+        // swift-tiny types are non-resilient + non-foreign - the
         // accessors return None cleanly.
         if matches!(
             d.type_flags().metadata_initialization(),
@@ -510,7 +510,7 @@ fn field_descriptors_emit_kinds_for_swift_tiny() {
     let descs: Vec<_> = rt.field_descriptors().collect();
     assert!(
         !descs.is_empty(),
-        "swift-tiny populates __swift5_fieldmd — expected ≥1 descriptor"
+        "swift-tiny populates __swift5_fieldmd - expected ≥1 descriptor"
     );
     let kinds: Vec<_> = descs.iter().map(|d| d.kind()).collect();
     assert!(
@@ -537,7 +537,7 @@ fn field_descriptor_records_for_hello_struct() {
     let rt = bin.swift().unwrap();
 
     // Locate Hello by kind + matching record-name set rather than
-    // mangled_type_name — Swift emits a null relative pointer for
+    // mangled_type_name - Swift emits a null relative pointer for
     // the descriptor's outer type-name slot when the type is a
     // module-local non-symbolic struct, so the only stable
     // identifier is the field record name itself.
@@ -557,9 +557,9 @@ fn field_descriptor_records_for_hello_struct() {
     assert_eq!(
         records[0].mangled_type_name(),
         Some("SS"),
-        "Hello.name is a String — Swift mangles to `SS`"
+        "Hello.name is a String - Swift mangles to `SS`"
     );
-    // `let name: String` — `is_var()` should be false.
+    // `let name: String` - `is_var()` should be false.
     assert!(
         !records[0].flags().is_var(),
         "Hello.name is a `let`, flags should not include IsVar"
@@ -585,7 +585,7 @@ fn field_descriptor_records_for_counter_class() {
     assert_eq!(
         records[0].mangled_type_name(),
         Some("Si"),
-        "Counter.count is an Int — Swift mangles to `Si`"
+        "Counter.count is an Int - Swift mangles to `Si`"
     );
     assert!(records[0].flags().is_var(), "Counter.count is a `var`");
 }
@@ -597,7 +597,7 @@ fn field_descriptor_records_for_mood_enum() {
     let rt = bin.swift().unwrap();
     // Mood is `enum Mood { case happy, sad(String) }`. Modern Swift
     // emits this as a single-payload enum (`Enum` kind) with two
-    // records — `sad` (one String payload) and `happy` (no payload).
+    // records - `sad` (one String payload) and `happy` (no payload).
     let mood = rt
         .field_descriptors()
         .find(|d| {
@@ -614,8 +614,8 @@ fn field_descriptor_records_for_mood_enum() {
         .collect();
     assert!(names.contains(&"happy".to_owned()), "names: {:?}", names);
     assert!(names.contains(&"sad".to_owned()), "names: {:?}", names);
-    // `sad(String)` carries a String payload — its mangled type
-    // name is `SS`. `happy` has no payload — no mangled type name.
+    // `sad(String)` carries a String payload - its mangled type
+    // name is `SS`. `happy` has no payload - no mangled type name.
     let sad = mood
         .records()
         .find(|r| r.field_name() == Some("sad"))
@@ -631,7 +631,7 @@ fn protocols_emits_greeter() {
     let protos: Vec<_> = rt.protocols().collect();
     assert!(
         !protos.is_empty(),
-        "swift-tiny defines `protocol Greeter` — expected ≥1 entry in __swift5_protos"
+        "swift-tiny defines `protocol Greeter` - expected ≥1 entry in __swift5_protos"
     );
     let greeter = protos
         .iter()
@@ -666,7 +666,7 @@ fn conformances_links_hello_to_greeter() {
     let confs: Vec<_> = rt.conformances().collect();
     assert!(
         !confs.is_empty(),
-        "swift-tiny has Hello: Greeter — expected ≥1 conformance in __swift5_proto"
+        "swift-tiny has Hello: Greeter - expected ≥1 conformance in __swift5_proto"
     );
 
     // Identify Hello's type-descriptor VA so we can match the
@@ -695,7 +695,7 @@ fn conformances_links_hello_to_greeter() {
                 }
             }
             other => panic!(
-                "swift-tiny Hello: Greeter should use DirectTypeDescriptor — got {:?}",
+                "swift-tiny Hello: Greeter should use DirectTypeDescriptor - got {:?}",
                 other
             ),
         }
@@ -771,7 +771,7 @@ fn types_emits_struct_class_enum() {
     let descs: Vec<_> = rt.types().collect();
     assert!(
         descs.len() >= 3,
-        "swift-tiny defines Hello / Counter / Mood — expected ≥3 type descriptors, got {}",
+        "swift-tiny defines Hello / Counter / Mood - expected ≥3 type descriptors, got {}",
         descs.len()
     );
     let kinds: Vec<_> = descs.iter().map(|d| d.kind()).collect();
@@ -809,7 +809,7 @@ fn type_kind_bodies_carry_basic_counts() {
             ("Counter", darwinscope::TypeKindBody::Class(c)) => {
                 // Counter has one stored property: `var count: Int`.
                 assert_eq!(c.num_fields, 1, "Counter has one field");
-                // Class_HasVTable should be set — bump() is a vtable
+                // Class_HasVTable should be set - bump() is a vtable
                 // entry; vtable headers are covered separately.
                 assert!(d.type_flags().class_has_vtable());
             }
@@ -841,7 +841,7 @@ fn type_descriptor_addresses_are_in_text() {
 
 #[test]
 fn type_iter_handles_missing_section_safely() {
-    // hello-arm64 has no __swift5_types — the iterator must be
+    // hello-arm64 has no __swift5_types - the iterator must be
     // empty, not panic. Detector returns None first; force the
     // walker via `bin.swift()` failing, then re-check with
     // objc-tiny which also has no Swift content but goes through

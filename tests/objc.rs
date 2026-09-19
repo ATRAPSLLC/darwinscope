@@ -268,7 +268,7 @@ fn category_walker_resolves_foreign_class_via_chained_bind() {
         .iter()
         .find(|c| c.name() == "Darwinscope")
         .expect("Darwinscope category");
-    // The host class is foreign — `cls` slot is a chained-fixup bind.
+    // The host class is foreign - `cls` slot is a chained-fixup bind.
     assert_eq!(dw.class_address(), 0);
     assert_eq!(
         dw.class_name(),

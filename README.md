@@ -1,6 +1,6 @@
 # darwinscope
 
-Static-analysis library for Mach-O binaries — including the Objective-C
+Static-analysis library for Mach-O binaries - including the Objective-C
 and Swift runtime metadata they embed.
 
 A single crate that reads a byte slice and surfaces every typed
@@ -38,15 +38,15 @@ metadata.
 | CFString constants            | `__cfstring`                                        |
 
 Pointer authentication (PAC) and `LC_DYLD_CHAINED_FIXUPS` are handled
-transparently — every pointer the walkers expose is the canonical
+transparently - every pointer the walkers expose is the canonical
 unauthenticated virtual address.
 
 ## Status
 
-v0.1 is under active development — see [`ToDo.md`](./ToDo.md) for the
+v0.1 is under active development - see [`ToDo.md`](./ToDo.md) for the
 roadmap.
 
 ## License
 
 Copyright 2026 ATRAPS LLC. Licensed under the Apache License,
-Version 2.0 — see [`LICENSE`](./LICENSE) and [`NOTICE`](./NOTICE).
+Version 2.0 - see [`LICENSE`](./LICENSE) and [`NOTICE`](./NOTICE).

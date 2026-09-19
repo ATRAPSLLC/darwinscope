@@ -1,6 +1,6 @@
 //! `__swift5_replac` walker (lower priority).
 //!
-//! Decodes [`DynamicReplacementScope`] entries — the original /
+//! Decodes [`DynamicReplacementScope`] entries - the original /
 //! replacement function pairs the Swift runtime resolves at
 //! `_dynamicReplacement(for:)` time. Cite:
 //! `swift/include/swift/ABI/Metadata.h` (search
@@ -12,7 +12,7 @@
 //! `AutomaticDynamicReplacementEntry` records. Each entry is 8
 //! bytes: a relative pointer to a `DynamicReplacementScope` plus a
 //! `u32` flag word. The walker surfaces one
-//! [`DynamicReplacementScope`] per entry (one row per scope) — the
+//! [`DynamicReplacementScope`] per entry (one row per scope) - the
 //! per-replacement function-pair table inside each scope is
 //! decoded only enough to surface count + base.
 //!

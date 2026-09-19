@@ -14,18 +14,18 @@
 //!
 //! See `RESEARCH.md` §"Objective-C runtime" for layout references.
 //! Section name synonyms are catalogued in `RESEARCH.md`
-//! §"Section names" — the lookup is segment-agnostic on purpose.
+//! §"Section names" - the lookup is segment-agnostic on purpose.
 //!
 //! ## Lifetime convention
 //!
-//! Every typed view here uses `<'a, 'p>` — `'a` is the data slice
+//! Every typed view here uses `<'a, 'p>` - `'a` is the data slice
 //! lifetime (where ObjC strings, struct payloads, and section
 //! bodies live) and `'p` is the borrow of the parent
 //! [`MachoBinary`] that owns the aggregate [`ObjcRuntime`]. ObjC
 //! string fields all live in `__TEXT,__objc_methname` /
 //! `__objc_classname` / `__objc_methtype` and are addressable
 //! through [`MachoBinary::raw`], so `&'a str` is the right name
-//! lifetime — this matches the [`Symbol`] and [`Section`]
+//! lifetime - this matches the [`Symbol`] and [`Section`]
 //! conventions.
 //!
 //! [`MachoBinary`]: crate::binary::MachoBinary
@@ -97,7 +97,7 @@ pub(crate) use section::{ObjcSection, find_section};
 pub struct ObjcRuntime<'a> {
     pub(crate) data: &'a [u8],
     /// Cached `(vmaddr, vmsize, fileoff, filesize)` tuples for
-    /// every segment with non-zero file backing — the input to
+    /// every segment with non-zero file backing - the input to
     /// [`vm_to_file_offset_in`]. Kept by value so the runtime
     /// outlives the originating [`MachoBinary`] borrow.
     pub(crate) segments: Vec<(u64, u64, u64, u64)>,
@@ -122,7 +122,7 @@ pub struct ObjcRuntime<'a> {
     /// `vm_address → canonical target VA` for every chained-fixup
     /// rebase. For images that use `LC_DYLD_CHAINED_FIXUPS`, the
     /// raw bytes in `__objc_classlist` / `__objc_protolist` etc.
-    /// encode chain-format pointer slots, not raw pointers — the
+    /// encode chain-format pointer slots, not raw pointers - the
     /// canonical target lives in [`Rebase::target_vmaddr`]. For
     /// legacy `LC_DYLD_INFO` images this map is empty and the
     /// walker falls back to PAC-stripping the raw slot value.
@@ -145,7 +145,7 @@ impl<'a> ObjcRuntime<'a> {
     pub(crate) fn build(bin: &MachoBinary<'a>) -> Option<Self> {
         if !bin.header().is_64() {
             #[cfg(feature = "tracing")]
-            tracing::debug!("darwinscope::objc: 32-bit Mach-O — Obj-C walker is 64-bit only");
+            tracing::debug!("darwinscope::objc: 32-bit Mach-O - Obj-C walker is 64-bit only");
             return None;
         }
         let imageinfo_sec = find_section(bin, "__objc_imageinfo")?;
@@ -155,7 +155,7 @@ impl<'a> ObjcRuntime<'a> {
         // and modern `LC_DYLD_CHAINED_FIXUPS` chains) by the slot
         // VA. ObjC ref sections and category `cls` slots resolve
         // through this map. Real binaries ship exactly one of the
-        // two bind encodings — `MachoBinary::imports` merges them
+        // two bind encodings - `MachoBinary::imports` merges them
         // for us, so we don't have to dispatch on which one was
         // emitted.
         //
@@ -207,7 +207,7 @@ impl<'a> ObjcRuntime<'a> {
         })
     }
 
-    /// Decoded `__objc_imageinfo` payload (always present — a
+    /// Decoded `__objc_imageinfo` payload (always present - a
     /// successful [`ObjcRuntime`] is gated on its existence).
     pub fn image_info(&self) -> ImageInfo {
         self.image_info
@@ -290,7 +290,7 @@ impl<'a> ObjcRuntime<'a> {
 
     /// Read a little-endian `u64` at virtual address `vmaddr`.
     ///
-    /// The result is **not** PAC-stripped — callers that read
+    /// The result is **not** PAC-stripped - callers that read
     /// PAC-signed slots (`isa`, `superclass`, `imp`) should pipe
     /// through [`ptr_auth::strip_signature`](crate::ptr_auth::strip_signature)
     /// before dereferencing.
@@ -313,7 +313,7 @@ impl<'a> ObjcRuntime<'a> {
     /// For images that ship `LC_DYLD_CHAINED_FIXUPS`, the on-disk
     /// bytes in ObjC metadata sections (`__objc_classlist`,
     /// `class_t.isa`, `class_t.superclass`, `class_ro_t.name`, …)
-    /// are *chain-format* slot encodings — high bits carry chain
+    /// are *chain-format* slot encodings - high bits carry chain
     /// metadata, not VA. The canonical target lives in the decoded
     /// [`Rebase::target_vmaddr`](crate::fixup::Rebase::target_vmaddr).
     ///
@@ -342,7 +342,7 @@ impl<'a> ObjcRuntime<'a> {
 /// `__LINKEDIT` / `LC_SYMTAB.stroff` and are addressable through
 /// `bin.raw()`. We locate the slice's pointer range inside `data`,
 /// reborrow at that range, and confirm the bytes still parse as
-/// valid UTF-8 (they always do — this is a sanity check, not a
+/// valid UTF-8 (they always do - this is a sanity check, not a
 /// correctness guard).
 ///
 /// Returns `None` when the slice does not lie inside `data` (which

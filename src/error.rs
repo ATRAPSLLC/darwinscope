@@ -4,7 +4,7 @@
 //! yield [`Error`], but per-row decode failures inside variable-length
 //! tables (method lists, ivar lists, type descriptors) are silently
 //! skipped. This mirrors the convention in the sibling parser crates
-//! (`undelphi`, `visualbasic`, `innospect`) — partial data is more
+//! (`undelphi`, `visualbasic`, `innospect`) - partial data is more
 //! useful than an all-or-nothing failure when staring at a malformed
 //! or adversarial sample.
 
@@ -16,7 +16,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// Top-level errors surfaced from `MachoBinary::parse` and friends.
 ///
 /// Per-row decode failures inside variable-length runtime tables do
-/// not produce `Error`s — they are skipped silently, with optional
+/// not produce `Error`s - they are skipped silently, with optional
 /// `tracing` events when the `tracing` feature is enabled.
 #[derive(Debug)]
 pub enum Error {

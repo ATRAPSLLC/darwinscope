@@ -64,22 +64,22 @@ const CLASS_RO_T_SIZE: usize = 72;
 /// Cite: `objc4/runtime/objc-runtime-new.h:140`.
 const FAST_DATA_MASK_64: u64 = 0x0000_007f_ffff_fff8;
 
-/// `FAST_DATA_MASK` for arm64e — wider to accommodate the larger
+/// `FAST_DATA_MASK` for arm64e - wider to accommodate the larger
 /// VA range PAC stripping leaves.
 /// Cite: `objc4/runtime/objc-runtime-new.h:138`.
 const FAST_DATA_MASK_ARM64E: u64 = 0x0f00_7fff_ffff_fff8;
 
-/// `FAST_FLAGS_MASK` — the 3 fast-flag bits.
+/// `FAST_FLAGS_MASK` - the 3 fast-flag bits.
 /// Cite: `objc4/runtime/objc-runtime-new.h:145`.
 const FAST_FLAGS_MASK: u64 = 0x0000_0000_0000_0007;
 
-/// `FAST_IS_SWIFT_LEGACY` — Swift 4 / earlier ABI.
+/// `FAST_IS_SWIFT_LEGACY` - Swift 4 / earlier ABI.
 /// Cite: `objc4/runtime/objc-runtime-new.h:121`.
 pub const FAST_IS_SWIFT_LEGACY: u64 = 0x1;
-/// `FAST_IS_SWIFT_STABLE` — Swift 5+ stable ABI.
+/// `FAST_IS_SWIFT_STABLE` - Swift 5+ stable ABI.
 /// Cite: `objc4/runtime/objc-runtime-new.h:122`.
 pub const FAST_IS_SWIFT_STABLE: u64 = 0x2;
-/// `FAST_HAS_DEFAULT_RR` — class has default retain/release.
+/// `FAST_HAS_DEFAULT_RR` - class has default retain/release.
 /// Cite: `objc4/runtime/objc-runtime-new.h:123`.
 pub const FAST_HAS_DEFAULT_RR: u64 = 0x4;
 
@@ -90,33 +90,33 @@ bitflags! {
     /// `RESEARCH.md` §"`RO_*` flags" (line 1407).
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub struct RoFlags: u32 {
-        /// `RO_META` — this `class_ro_t` belongs to a metaclass.
+        /// `RO_META` - this `class_ro_t` belongs to a metaclass.
         const META = 1 << 0;
-        /// `RO_ROOT` — root class (e.g. `NSObject`).
+        /// `RO_ROOT` - root class (e.g. `NSObject`).
         const ROOT = 1 << 1;
-        /// `RO_HAS_CXX_STRUCTORS` — class has C++ ctor and dtor.
+        /// `RO_HAS_CXX_STRUCTORS` - class has C++ ctor and dtor.
         const HAS_CXX_STRUCTORS = 1 << 2;
-        /// `RO_HIDDEN` — class is symbol-hidden.
+        /// `RO_HIDDEN` - class is symbol-hidden.
         const HIDDEN = 1 << 4;
-        /// `RO_EXCEPTION` — Obj-C exception class.
+        /// `RO_EXCEPTION` - Obj-C exception class.
         const EXCEPTION = 1 << 5;
-        /// `RO_HAS_SWIFT_INITIALIZER` — Swift-metadata initialiser
+        /// `RO_HAS_SWIFT_INITIALIZER` - Swift-metadata initialiser
         /// trailing pointer is present.
         const HAS_SWIFT_INITIALIZER = 1 << 6;
-        /// `RO_IS_ARC` — built with ARC.
+        /// `RO_IS_ARC` - built with ARC.
         const IS_ARC = 1 << 7;
-        /// `RO_HAS_CXX_DTOR_ONLY` — C++ destructor only (no ctor).
+        /// `RO_HAS_CXX_DTOR_ONLY` - C++ destructor only (no ctor).
         const HAS_CXX_DTOR_ONLY = 1 << 8;
-        /// `RO_HAS_WEAK_WITHOUT_ARC` — weak ivars but not ARC.
+        /// `RO_HAS_WEAK_WITHOUT_ARC` - weak ivars but not ARC.
         const HAS_WEAK_WITHOUT_ARC = 1 << 9;
-        /// `RO_FORBIDS_ASSOCIATED_OBJECTS` — cannot have associated
+        /// `RO_FORBIDS_ASSOCIATED_OBJECTS` - cannot have associated
         /// objects.
         const FORBIDS_ASSOCIATED_OBJECTS = 1 << 10;
-        /// `RO_FROM_BUNDLE` — class came from a bundle.
+        /// `RO_FROM_BUNDLE` - class came from a bundle.
         const FROM_BUNDLE = 1 << 29;
-        /// `RO_FUTURE` — set by runtime, never on disk.
+        /// `RO_FUTURE` - set by runtime, never on disk.
         const FUTURE = 1 << 30;
-        /// `RO_REALIZED` — set by runtime, never on disk.
+        /// `RO_REALIZED` - set by runtime, never on disk.
         const REALIZED = 1 << 31;
     }
 }
@@ -156,7 +156,7 @@ impl<'a, 'p> ObjcClass<'a, 'p> {
         self.superclass
     }
 
-    /// Best-effort superclass name — `Some(name)` when the
+    /// Best-effort superclass name - `Some(name)` when the
     /// superclass pointer resolves in this image (a class with a
     /// matching `class_t` VA), or when the slot is a chained-fixup
     /// bind to `_OBJC_CLASS_$_<name>` / `_OBJC_METACLASS_$_<name>`.
@@ -177,19 +177,19 @@ impl<'a, 'p> ObjcClass<'a, 'p> {
         None
     }
 
-    /// Raw `class_data_bits_t.bits` — `class_ro_t` pointer plus
+    /// Raw `class_data_bits_t.bits` - `class_ro_t` pointer plus
     /// FAST_*_FLAGS in the low 3 bits.
     pub fn bits(&self) -> u64 {
         self.bits
     }
 
-    /// FAST_*_FLAGS bits — the low 3 bits of [`Self::bits`].
+    /// FAST_*_FLAGS bits - the low 3 bits of [`Self::bits`].
     pub fn fast_flags(&self) -> u64 {
         self.bits & FAST_FLAGS_MASK
     }
 
     /// `true` when the class carries either Swift fast-flag
-    /// (`FAST_IS_SWIFT_LEGACY` or `FAST_IS_SWIFT_STABLE`) — i.e.
+    /// (`FAST_IS_SWIFT_LEGACY` or `FAST_IS_SWIFT_STABLE`) - i.e.
     /// the class is paired with a Swift type metadata record.
     pub fn is_swift(&self) -> bool {
         (self.fast_flags() & (FAST_IS_SWIFT_LEGACY | FAST_IS_SWIFT_STABLE)) != 0
@@ -230,7 +230,7 @@ impl core::fmt::Debug for ObjcClass<'_, '_> {
     }
 }
 
-/// Decoded `class_ro_t` — the *read-only* per-class metadata blob
+/// Decoded `class_ro_t` - the *read-only* per-class metadata blob
 /// the Obj-C runtime ingests at first message.
 ///
 /// `class_ro_t` is the immutable static side of the class
@@ -275,13 +275,13 @@ impl<'a, 'p> ClassRo<'a, 'p> {
         self.flags
     }
 
-    /// `instanceStart` — offset where this class's ivars begin in
+    /// `instanceStart` - offset where this class's ivars begin in
     /// the instance.
     pub fn instance_start(&self) -> u32 {
         self.instance_start
     }
 
-    /// `instanceSize` — total instance size in bytes.
+    /// `instanceSize` - total instance size in bytes.
     pub fn instance_size(&self) -> u32 {
         self.instance_size
     }
@@ -291,7 +291,7 @@ impl<'a, 'p> ClassRo<'a, 'p> {
         self.name
     }
 
-    /// `RO_META` — this `class_ro_t` belongs to a metaclass.
+    /// `RO_META` - this `class_ro_t` belongs to a metaclass.
     pub fn is_meta(&self) -> bool {
         self.flags.contains(RoFlags::META)
     }
@@ -476,7 +476,7 @@ impl<'a, 'p> Iterator for ClassIter<'a, 'p> {
     type Item = ObjcClass<'a, 'p>;
     fn next(&mut self) -> Option<Self::Item> {
         // If the metaclass decode fails fall through to the
-        // next instance class — we deliberately do NOT recurse
+        // next instance class - we deliberately do NOT recurse
         // through the metaclass's own `isa` (root metaclasses
         // self-loop, which would make iteration non-terminating).
         if let Some(meta_va) = self.pending_meta.take()
@@ -520,13 +520,13 @@ pub(crate) fn decode_class<'a, 'p>(
 
     // For class_t.bits we need both:
     //
-    // 1. The canonical class_ro_t pointer — comes from the rebase
+    // 1. The canonical class_ro_t pointer - comes from the rebase
     //    table on chained-fixup binaries (the chain encoding's
     //    target field is already FAST_DATA_MASK-aligned and
     //    PAC-stripped); on legacy binaries we PAC-strip the raw
     //    slot and apply FAST_DATA_MASK ourselves.
     //
-    // 2. The FAST_*_FLAGS in the low 3 bits — these are stored
+    // 2. The FAST_*_FLAGS in the low 3 bits - these are stored
     //    on disk inside the slot itself even when the rest of the
     //    word is chain-format. We recover them from the raw u64
     //    that was written to disk.

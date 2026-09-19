@@ -2,7 +2,7 @@
 //!
 //! `cargo run --example dump -- <path-to-macho>` reads a Mach-O image
 //! and writes a deterministic, line-oriented summary of every field,
-//! accessor, and iterator the public API exposes — header, segments
+//! accessor, and iterator the public API exposes - header, segments
 //! and sections (with body length, section-type bits, Shannon
 //! entropy, BLAKE3), the full symbol table, dylib graph, load
 //! commands, function-starts table, the merged import list, exports,
