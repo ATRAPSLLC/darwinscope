@@ -8,7 +8,8 @@
 //!
 //! - The Mach-O container itself: header, load commands, segments,
 //!   sections, nlist symbol table, bind / export tries, fat-binary
-//!   slices, dylib graph, and `LC_FUNCTION_STARTS`.
+//!   slices, dylib graph, `LC_FUNCTION_STARTS`, and the data ranges
+//!   `LC_DATA_IN_CODE` declares inside code sections.
 //! - The embedded **code-signature SuperBlob**: CodeDirectory
 //!   identifier and Team ID, signing flags, CodeDirectory hash type,
 //!   embedded CMS signature size, entitlements XML plist (key /
@@ -119,6 +120,7 @@ pub mod binary;
 pub mod block;
 pub mod cfstring;
 pub mod codesign;
+pub mod dataincode;
 pub mod dylib;
 pub mod error;
 pub mod export;
