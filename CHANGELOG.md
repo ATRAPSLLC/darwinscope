@@ -5,6 +5,18 @@ All notable changes to `darwinscope` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.1.3]
+
+### Added
+
+- `MachoBinary::data_in_code()` walks `LC_DATA_IN_CODE`: each entry's offset,
+  length and `DICE_KIND_*` value (`DataInCodeKind`, with the entry width of the
+  jump-table kinds), resolved to the virtual address its segment maps it to. A
+  disassembler reads it to keep jump tables and literal islands out of the
+  instruction stream.
+
 ## [0.1.2]
 
 ### Added
@@ -67,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release.
 
+[0.1.3]: https://github.com/ATRAPSLLC/darwinscope/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/ATRAPSLLC/darwinscope/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/ATRAPSLLC/darwinscope/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ATRAPSLLC/darwinscope/releases/tag/v0.1.0

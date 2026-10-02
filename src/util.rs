@@ -258,9 +258,50 @@ pub(crate) fn vm_to_file_offset_in(
     None
 }
 
+/// Translate a file offset to the virtual-memory address its segment
+/// maps it to: the inverse of [`vm_to_file_offset_in`].
+///
+/// Returns `None` if no segment's on-disk extent holds the offset. A
+/// segment's file bytes map to the start of its VM range, so an offset
+/// past `filesize` belongs to no segment even where `vmsize` is larger.
+///
+/// # Arguments
+///
+/// * `segments` - `(vmaddr, vmsize, fileoff, filesize)` per segment.
+/// * `offset` - A file offset, counted from the image's `mach_header`.
+pub(crate) fn file_offset_to_vm_in(
+    segments: impl IntoIterator<Item = (u64, u64, u64, u64)>,
+    offset: u64,
+) -> Option<u64> {
+    for (seg_vmaddr, seg_vmsize, seg_fileoff, seg_filesize) in segments {
+        let mapped = seg_filesize.min(seg_vmsize);
+        let seg_end = seg_fileoff.checked_add(mapped)?;
+        if (seg_fileoff..seg_end).contains(&offset) {
+            return seg_vmaddr.checked_add(offset.checked_sub(seg_fileoff)?);
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// An offset resolves through the segment whose file bytes hold it, and
+    /// round-trips through `vm_to_file_offset_in`; one past every segment's
+    /// file extent resolves to nothing.
+    #[test]
+    fn file_offset_to_vm_inverts_vm_to_file_offset() {
+        let segments = [
+            (0, 0x1_0000_0000, 0, 0),
+            (0x1_0000_0000, 0x8000, 0, 0x4000),
+            (0x1_0000_8000, 0x4000, 0x4000, 0x1000),
+        ];
+        assert_eq!(file_offset_to_vm_in(segments, 0x460), Some(0x1_0000_0460));
+        assert_eq!(file_offset_to_vm_in(segments, 0x4010), Some(0x1_0000_8010));
+        assert_eq!(file_offset_to_vm_in(segments, 0x5000), None);
+        assert_eq!(vm_to_file_offset_in(segments, 0x1_0000_8010), Some(0x4010));
+    }
 
     #[test]
     fn uleb128_simple() {

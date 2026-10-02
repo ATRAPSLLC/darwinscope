@@ -37,6 +37,7 @@ use crate::{
     block::BlockRuntime,
     cfstring::CFStringRuntime,
     codesign::Signature,
+    dataincode::DataInCodeIter,
     dylib::{DylibIter, LoadCommandIter},
     error::{Error, Result},
     export::ExportIter,
@@ -90,6 +91,7 @@ pub struct MachoBinary<'a> {
     dylinker: Option<&'a str>,
     function_starts_cmd: Option<LinkeditDataCommand>,
     function_starts_count: Option<u32>,
+    data_in_code_cmd: Option<LinkeditDataCommand>,
     chained_fixups_cmd: Option<LinkeditDataCommand>,
     code_signature_cmd: Option<LinkeditDataCommand>,
 }
@@ -165,6 +167,7 @@ impl<'a> MachoBinary<'a> {
         let mut build_tools: Vec<BuildTool> = Vec::new();
         let mut dylinker = None;
         let mut function_starts_cmd = None;
+        let mut data_in_code_cmd = None;
         let mut chained_fixups_cmd = None;
         let mut code_signature_cmd = None;
 
@@ -246,6 +249,9 @@ impl<'a> MachoBinary<'a> {
                 CommandVariant::FunctionStarts(c) => {
                     function_starts_cmd = Some(*c);
                 }
+                CommandVariant::DataInCode(c) => {
+                    data_in_code_cmd = Some(*c);
+                }
                 CommandVariant::DyldChainedFixups(c) => {
                     chained_fixups_cmd = Some(*c);
                 }
@@ -268,6 +274,7 @@ impl<'a> MachoBinary<'a> {
             dylinker,
             function_starts_cmd,
             function_starts_count: None,
+            data_in_code_cmd,
             chained_fixups_cmd,
             code_signature_cmd,
         };
@@ -382,6 +389,37 @@ impl<'a> MachoBinary<'a> {
             done: false,
             _parent: PhantomData,
         }
+    }
+
+    /// Iterator over the entries of `LC_DATA_IN_CODE`: the ranges of
+    /// code sections the linker states hold data - jump tables and
+    /// literal islands - rather than instructions.
+    ///
+    /// Each entry's offset counts from this image's `mach_header` (the
+    /// start of [`Self::raw`]) and is resolved to the virtual address
+    /// its segment maps it to; an entry no segment's file bytes hold is
+    /// still yielded, with no address.
+    ///
+    /// Returns the empty iterator when the binary has no
+    /// `LC_DATA_IN_CODE` or its data slice is out of bounds.
+    pub fn data_in_code(&self) -> DataInCodeIter<'a, '_> {
+        let Some(cmd) = self.data_in_code_cmd else {
+            return DataInCodeIter::empty();
+        };
+        let dataoff = cmd.dataoff as usize;
+        let Some(end) = dataoff.checked_add(cmd.datasize as usize) else {
+            return DataInCodeIter::empty();
+        };
+        let Some(stream) = self.data.get(dataoff..end) else {
+            return DataInCodeIter::empty();
+        };
+        let segments = self
+            .macho
+            .segments
+            .iter()
+            .map(|s| (s.vmaddr, s.vmsize, s.fileoff, s.filesize))
+            .collect();
+        DataInCodeIter::new(stream, self.macho.little_endian, segments)
     }
 
     /// Iterator over exports - symbols this image publishes to dyld.
