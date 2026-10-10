@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4]
+
+### Added
+
+- `MachoBinary::unwind_info()` reads the compact unwind table in
+  `__TEXT,__unwind_info` through the new `unwind` module. `UnwindInfo::functions()`
+  lists every function's start address and compact unwind encoding, walking both
+  regular and compressed second-level pages; `UnwindInfo::lsdas()` pairs each
+  function that handles exceptions with its LSDA (its table in `__gcc_except_tab`);
+  `UnwindInfo::end()` gives the address one past the last function. Function
+  starts are a disassembler's entry points, and the LSDAs lead to the landing pads
+  that are reached only by unwinding.
+
 ## [0.1.3]
 
 ### Added
@@ -79,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release.
 
+[0.1.4]: https://github.com/ATRAPSLLC/darwinscope/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/ATRAPSLLC/darwinscope/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/ATRAPSLLC/darwinscope/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/ATRAPSLLC/darwinscope/compare/v0.1.0...v0.1.1

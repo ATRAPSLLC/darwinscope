@@ -131,6 +131,7 @@ pub mod ptrauth;
 pub mod segment;
 pub mod swift;
 pub mod symbol;
+pub mod unwind;
 pub mod util;
 
 pub use binary::MachoBinary;
