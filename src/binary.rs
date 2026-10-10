@@ -50,6 +50,7 @@ use crate::{
     segment::{SectionIter, SegmentIter},
     swift::SwiftRuntime,
     symbol::SymbolIter,
+    unwind::UnwindInfo,
     util::{read_u32_le_at, read_uleb128, vm_to_file_offset_in},
 };
 
@@ -420,6 +421,22 @@ impl<'a> MachoBinary<'a> {
             .map(|s| (s.vmaddr, s.vmsize, s.fileoff, s.filesize))
             .collect();
         DataInCodeIter::new(stream, self.macho.little_endian, segments)
+    }
+
+    /// The compact unwind table, `__TEXT,__unwind_info`: each function's
+    /// unwind encoding, and the LSDA of each that handles exceptions.
+    ///
+    /// `None` when the binary has no such section, it holds no on-disk bytes,
+    /// or it is not a version 1 table.
+    pub fn unwind_info(&self) -> Option<UnwindInfo<'a>> {
+        let section = self.sections().find(|section| {
+            section.segname() == "__TEXT" && section.sectname() == "__unwind_info"
+        })?;
+        let image_base = self
+            .segments()
+            .find(|segment| segment.name() == "__TEXT")?
+            .vmaddr();
+        UnwindInfo::parse(section.body(), image_base)
     }
 
     /// Iterator over exports - symbols this image publishes to dyld.
