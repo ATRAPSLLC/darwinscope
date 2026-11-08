@@ -84,7 +84,8 @@ pub struct CaptureIter<'a, 'p> {
 }
 
 impl<'a, 'p> CaptureIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p SwiftRuntime<'a>) -> Self {
+    /// The iterator over `__swift5_capture` of `rt`.
+    pub fn new(rt: &'p SwiftRuntime<'a>) -> Self {
         Self { rt, cursor: 0 }
     }
 }

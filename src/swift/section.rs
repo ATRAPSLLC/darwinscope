@@ -18,9 +18,11 @@ use crate::binary::MachoBinary;
 /// (`body_offset`) into an absolute VM address (`vmaddr + offset`)
 /// without re-scanning the segment table.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct SwiftSection<'a> {
-    pub(crate) body: &'a [u8],
-    pub(crate) vmaddr: u64,
+pub struct SwiftSection<'a> {
+    /// The section's bytes.
+    pub body: &'a [u8],
+    /// The VM address the section's first byte maps to.
+    pub vmaddr: u64,
 }
 
 /// Locate a Swift metadata section by canonical name.
@@ -31,10 +33,7 @@ pub(crate) struct SwiftSection<'a> {
 /// `__DATA_CONST` does not affect identity.
 ///
 /// Returns `None` when no section with the given name exists.
-pub(crate) fn find_swift_section<'a>(
-    bin: &MachoBinary<'a>,
-    name: &str,
-) -> Option<SwiftSection<'a>> {
+pub fn find_swift_section<'a>(bin: &MachoBinary<'a>, name: &str) -> Option<SwiftSection<'a>> {
     for sect in bin.sections() {
         if sect.sectname() == name {
             return Some(SwiftSection {

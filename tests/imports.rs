@@ -115,3 +115,44 @@ fn chained_imports_carry_dylib_path() {
     }
     assert!(count >= 1);
 }
+
+/// The legacy fixture's bind rows are the rows goblin's interpreter
+/// states for it (an independent decoder of the same opcodes).
+#[test]
+fn legacy_binds_match_goblin() {
+    let bytes = read(LEGACY_PATH);
+    let bin = MachoBinary::parse(&bytes).unwrap();
+    let ours: Vec<_> = bin
+        .imports()
+        .map(|i| {
+            (
+                i.name,
+                i.dylib,
+                i.address,
+                i.is_lazy,
+                i.is_weak,
+                i.addend,
+                i.bind_offset,
+            )
+        })
+        .collect();
+    let goblin = goblin::mach::MachO::parse(&bytes, 0).unwrap();
+    let theirs: Vec<_> = goblin
+        .imports()
+        .unwrap()
+        .into_iter()
+        .map(|i| {
+            (
+                i.name,
+                i.dylib,
+                i.address,
+                i.is_lazy,
+                i.is_weak,
+                i.addend,
+                i.start_of_sequence_offset,
+            )
+        })
+        .collect();
+    assert!(!theirs.is_empty());
+    assert_eq!(ours, theirs);
+}

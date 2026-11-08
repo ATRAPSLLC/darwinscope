@@ -23,8 +23,7 @@ use std::path::Path;
 use darwinscope::{
     ConformanceFlags, ContextDescriptorFlags, ContextDescriptorKind, FieldDescriptorKind,
     FieldRecordFlags, MachoBinary, MetadataInitializationKind, MethodDescriptorFlags,
-    SwiftConformanceIter, SwiftMethodKind, SwiftRuntime, TypeContextDescriptorFlags,
-    TypeReferenceKind,
+    SwiftMethodKind, TypeContextDescriptorFlags, TypeReferenceKind,
 };
 
 const SWIFT_TINY_ARM64: &str = "tests/samples/synthesized/swift-tiny/swift-tiny-arm64";
@@ -88,11 +87,35 @@ fn swift_runtime_records_optional_section_presence() {
         "swift-tiny should carry __swift5_entry"
     );
 
-    // It does NOT ship __swift5_capture / __swift5_replac /
-    // __swift5_builtin under Swift 6.x. The accessors should
-    // truthfully report absence rather than panic.
-    assert!(!rt.has_replacement_chain());
+    // It also ships the mangled-name pool every descriptor's name
+    // pointer reaches into.
+    assert!(
+        rt.has_mangled_name_pool(),
+        "swift-tiny should carry __swift5_typeref"
+    );
+
+    // It does NOT ship __swift5_builtin / __swift5_mpenum /
+    // __swift5_acfuncs / __swift5_assocty / __swift5_replac2 under
+    // Swift 6.x. Every accessor of the family must truthfully report
+    // absence rather than panic.
+    assert!(!rt.has_builtin_descriptors());
+    assert!(!rt.has_multi_payload_enum_descriptors());
+    assert!(!rt.has_accessible_functions());
     assert!(!rt.has_associated_type_descriptors());
+    assert!(!rt.has_replacement_chain());
+
+    // The same answers on the x86_64 slice: presence is a property of
+    // the image, not of the architecture the walker runs on.
+    let x86 = read(SWIFT_TINY_X86_64);
+    let x86_bin = MachoBinary::parse(&x86).unwrap();
+    let x86_rt = x86_bin.swift().unwrap();
+    assert!(x86_rt.has_entry_point());
+    assert!(x86_rt.has_mangled_name_pool());
+    assert!(!x86_rt.has_builtin_descriptors());
+    assert!(!x86_rt.has_multi_payload_enum_descriptors());
+    assert!(!x86_rt.has_accessible_functions());
+    assert!(!x86_rt.has_associated_type_descriptors());
+    assert!(!x86_rt.has_replacement_chain());
 }
 
 #[test]
@@ -158,13 +181,16 @@ fn field_descriptor_kind_round_trips() {
         (6, FieldDescriptorKind::ObjCProtocol),
         (7, FieldDescriptorKind::ObjCClass),
     ] {
-        // FieldDescriptorKind::from_bits is pub(crate); round-trip
-        // via a hand-built header descriptor would require a parsed
-        // fixture. Here we just exercise the public matchers.
-        let _ = expected;
-        let _ = raw;
+        assert_eq!(FieldDescriptorKind::from_bits(raw), expected, "{raw}");
     }
-    // Field-walker assertions cover this elsewhere in the file.
+    // Every value the enum does not name is kept verbatim.
+    for raw in [8u16, 9, 0x100, u16::MAX] {
+        assert_eq!(
+            FieldDescriptorKind::from_bits(raw),
+            FieldDescriptorKind::Other(raw),
+            "{raw}"
+        );
+    }
 }
 
 #[test]
@@ -173,28 +199,6 @@ fn field_record_flags_decode() {
     assert!(f.is_indirect_case());
     assert!(f.is_var());
     assert!(!f.is_artificial());
-}
-
-fn open_swift(path: &str) -> (Vec<u8>, ()) {
-    // The runtime borrows from `bytes`, so callers must keep the
-    // returned Vec alive. Each test typically does:
-    //
-    //   let bytes = read(SWIFT_TINY_ARM64);
-    //   let bin = MachoBinary::parse(&bytes).unwrap();
-    //   let rt = bin.swift().unwrap();
-    //
-    // This helper is a placeholder for the fixture path.
-    (read(path), ())
-}
-
-#[allow(dead_code)]
-fn _smoke_helper_lifetime_anchor() {
-    // Forces the helper above to type-check against the real fixture
-    // paths even when no callers exist yet.
-    let (b1, _) = open_swift(SWIFT_TINY_ARM64);
-    let (b2, _) = open_swift(SWIFT_TINY_X86_64);
-    let (b3, _) = open_swift(SWIFT_TINY_FAT);
-    drop((b1, b2, b3));
 }
 
 #[test]
@@ -849,9 +853,4 @@ fn type_iter_handles_missing_section_safely() {
     let bytes = read(OBJC_TINY_ARM64);
     let bin = MachoBinary::parse(&bytes).unwrap();
     assert!(bin.swift().is_none());
-}
-
-#[allow(dead_code)]
-fn _types_typed<'a, 'r>(rt: &'r SwiftRuntime<'a>) -> SwiftConformanceIter<'a, 'r> {
-    rt.conformances()
 }

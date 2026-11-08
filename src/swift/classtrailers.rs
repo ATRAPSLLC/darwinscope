@@ -174,19 +174,20 @@ pub struct InvertibleProtocolSet {
 /// Iterator over canonical-specialised-metadata pointers
 /// (prespecialisations).
 pub struct PrespecializationIter<'a, 'p> {
-    pub(crate) rt: &'p SwiftRuntime<'a>,
-    pub(crate) base_va: u64,
-    pub(crate) count: u32,
-    pub(crate) cursor: u32,
+    rt: &'p SwiftRuntime<'a>,
+    base_va: u64,
+    count: u32,
+    cursor: u32,
 }
 
 impl<'a, 'p> PrespecializationIter<'a, 'p> {
-    #[allow(dead_code)] // Reserved for explicit-empty construction by future PRs.
-    pub(crate) fn empty(rt: &'p SwiftRuntime<'a>) -> Self {
+    /// The iterator over `count` canonical specialised metadata pointers starting at `base_va`. A
+    /// `count` of zero yields nothing.
+    pub fn new(rt: &'p SwiftRuntime<'a>, base_va: u64, count: u32) -> Self {
         Self {
             rt,
-            base_va: 0,
-            count: 0,
+            base_va,
+            count,
             cursor: 0,
         }
     }
@@ -217,7 +218,7 @@ impl<'a, 'p> Iterator for PrespecializationIter<'a, 'p> {
 ///
 /// `trailing_start` is the VA of the first byte after the
 /// `TargetClassDescriptor` fixed header (i.e. base + 24).
-pub(crate) fn decode_class_trailers<'a>(
+pub fn decode_class_trailers<'a>(
     rt: &SwiftRuntime<'a>,
     flags: &ContextDescriptorFlags,
     trailing_start: u64,
@@ -349,7 +350,7 @@ pub(crate) fn decode_class_trailers<'a>(
 /// (struct / enum), invoking the supplied callbacks as each block
 /// is decoded.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn decode_value_type_trailers(
+pub fn decode_value_type_trailers(
     rt: &SwiftRuntime<'_>,
     flags: &ContextDescriptorFlags,
     trailing_start: u64,

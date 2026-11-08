@@ -59,21 +59,21 @@ impl<'a> ParentContext<'a> {
 /// (innermost enclosing context first, module last). Stops when
 /// the `Parent` relative pointer is null.
 pub struct ParentChain<'a, 'p> {
-    pub(crate) rt: &'p SwiftRuntime<'a>,
+    rt: &'p SwiftRuntime<'a>,
     /// VA of the next context descriptor to read. `0` ⇒ chain
     /// exhausted.
-    pub(crate) next_descriptor_va: u64,
+    next_descriptor_va: u64,
 }
 
 impl<'a, 'p> ParentChain<'a, 'p> {
-    pub(crate) fn empty(rt: &'p SwiftRuntime<'a>) -> Self {
+    fn empty(rt: &'p SwiftRuntime<'a>) -> Self {
         Self {
             rt,
             next_descriptor_va: 0,
         }
     }
 
-    pub(crate) fn starting_at(rt: &'p SwiftRuntime<'a>, parent_va: u64) -> Self {
+    fn starting_at(rt: &'p SwiftRuntime<'a>, parent_va: u64) -> Self {
         Self {
             rt,
             next_descriptor_va: parent_va,
@@ -158,10 +158,10 @@ impl<'a, 'p> crate::swift::TypeDescriptor<'a, 'p> {
     /// without a parent context - extremely rare; module-less top-
     /// level types have a parent with a null Name).
     pub fn parent(&self) -> ParentChain<'a, 'p> {
-        if self.parent_va == 0 {
+        if self.parent_address() == 0 {
             return ParentChain::empty(self.runtime());
         }
-        ParentChain::starting_at(self.runtime(), self.parent_va)
+        ParentChain::starting_at(self.runtime(), self.parent_address())
     }
 
     /// Fully-qualified name built by walking the parent chain.
@@ -179,14 +179,14 @@ impl<'a, 'p> crate::swift::TypeDescriptor<'a, 'p> {
         }
         hops.reverse();
         if hops.is_empty() {
-            return self.name.to_owned();
+            return self.name().to_owned();
         }
         let mut out = String::new();
         for hop in hops {
             out.push_str(hop);
             out.push('.');
         }
-        out.push_str(self.name);
+        out.push_str(self.name());
         out
     }
 }
@@ -194,10 +194,10 @@ impl<'a, 'p> crate::swift::TypeDescriptor<'a, 'p> {
 impl<'a, 'p> crate::swift::SwiftProtocol<'a, 'p> {
     /// Walk the parent context chain for this protocol.
     pub fn parent(&self) -> ParentChain<'a, 'p> {
-        if self.parent_va == 0 {
-            return ParentChain::empty(self.rt);
+        if self.parent_address() == 0 {
+            return ParentChain::empty(self.runtime());
         }
-        ParentChain::starting_at(self.rt, self.parent_va)
+        ParentChain::starting_at(self.runtime(), self.parent_address())
     }
 
     /// Fully-qualified protocol name built via the parent chain.
@@ -210,14 +210,14 @@ impl<'a, 'p> crate::swift::SwiftProtocol<'a, 'p> {
         }
         hops.reverse();
         if hops.is_empty() {
-            return self.name.to_owned();
+            return self.name().to_owned();
         }
         let mut out = String::new();
         for hop in hops {
             out.push_str(hop);
             out.push('.');
         }
-        out.push_str(self.name);
+        out.push_str(self.name());
         out
     }
 }

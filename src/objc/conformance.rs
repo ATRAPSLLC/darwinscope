@@ -41,7 +41,8 @@ struct ConformanceEdgeCursor<'a, 'p> {
 }
 
 impl<'a, 'p> ConformanceIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p ObjcRuntime<'a>) -> Self {
+    /// The iterator over the class -> protocol edges of `rt`.
+    pub fn new(rt: &'p ObjcRuntime<'a>) -> Self {
         Self {
             classes: ClassIter::new(rt),
             current: None,

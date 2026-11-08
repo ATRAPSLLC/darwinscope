@@ -242,7 +242,7 @@ impl<'a> BlockRuntime<'a> {
     /// 64-bit only; the canonical Block ABI is layout-stable on
     /// 32-bit but every other walker in this crate gates on `is_64`)
     /// or when neither anchor symbol appears in the bind index.
-    pub(crate) fn build(bin: &MachoBinary<'a>) -> Option<Self> {
+    pub fn build(bin: &MachoBinary<'a>) -> Option<Self> {
         if !bin.header().is_64() {
             #[cfg(feature = "tracing")]
             tracing::debug!("darwinscope::block: 32-bit Mach-O - Block walker is 64-bit only");
@@ -253,17 +253,7 @@ impl<'a> BlockRuntime<'a> {
         let mut global_sites: Vec<BlockReference<'a>> = Vec::new();
         let mut stack_sites: Vec<BlockReference<'a>> = Vec::new();
         for imp in bin.imports() {
-            // We need name / dylib at the data lifetime. They already
-            // alias `data` (`__LINKEDIT` / `LC_SYMTAB.stroff`); we
-            // re-borrow at that range so the iterator output isn't
-            // tied to the goblin `&self` borrow.
-            let Some(name) = reborrow_into_data(data, imp.name) else {
-                continue;
-            };
-            let Some(dylib) = reborrow_into_data(data, imp.dylib) else {
-                continue;
-            };
-            let kind = match name {
+            let kind = match imp.name {
                 NSCONCRETE_GLOBAL_BLOCK => BlockIsa::Global,
                 NSCONCRETE_STACK_BLOCK => BlockIsa::Stack,
                 _ => continue,
@@ -271,7 +261,7 @@ impl<'a> BlockRuntime<'a> {
             let site = BlockReference {
                 kind,
                 slot_address: imp.address,
-                dylib,
+                dylib: imp.dylib,
             };
             match kind {
                 BlockIsa::Global => global_sites.push(site),
@@ -503,27 +493,6 @@ impl<'a, 'p> Iterator for LiteralIter<'a, 'p> {
             // row and continue. Don't terminate the iterator.
         }
     }
-}
-
-/// Re-borrow a `&str` slice that aliases somewhere inside `data`,
-/// returning a `&'a str` whose lifetime is the data lifetime. Same
-/// rationale as [`crate::objc::reborrow_into_data`].
-fn reborrow_into_data<'a>(data: &'a [u8], s: &str) -> Option<&'a str> {
-    let s_ptr = s.as_ptr() as usize;
-    let s_len = s.len();
-    let data_start = data.as_ptr() as usize;
-    let data_end = data_start.checked_add(data.len())?;
-    if s_ptr < data_start {
-        return None;
-    }
-    let s_end = s_ptr.checked_add(s_len)?;
-    if s_end > data_end {
-        return None;
-    }
-    let off = s_ptr.checked_sub(data_start)?;
-    let end = off.checked_add(s_len)?;
-    let bytes = data.get(off..end)?;
-    core::str::from_utf8(bytes).ok()
 }
 
 #[cfg(test)]

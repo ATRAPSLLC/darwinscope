@@ -61,7 +61,10 @@ mod refs;
 mod section;
 
 pub use category::{CategoryIter, ObjcCategory};
-pub use class::{ClassIter, ClassRo, ObjcClass};
+pub use class::{
+    ClassIter, ClassRo, FAST_HAS_DEFAULT_RR, FAST_IS_SWIFT_LEGACY, FAST_IS_SWIFT_STABLE, ObjcClass,
+    decode_class_name,
+};
 pub use conformance::{ConformanceEdge, ConformanceIter};
 pub use imageinfo::{
     ImageInfo, OBJC_IMAGE_DYLD_CATEGORIES_OPTIMIZED, OBJC_IMAGE_HAS_CATEGORY_CLASS_PROPERTIES,
@@ -69,13 +72,15 @@ pub use imageinfo::{
     OBJC_IMAGE_REQUIRES_GC, OBJC_IMAGE_SIGNED_CLASS_RO, OBJC_IMAGE_SUPPORTS_GC,
     OBJC_IMAGE_SWIFT_STABLE_VERSION_MASK, OBJC_IMAGE_SWIFT_UNSTABLE_VERSION_MASK,
 };
-pub use ivar::{Ivar, IvarIter};
-pub use method::{Method, MethodIter, MethodKind};
-pub use property::{ParsedAttribute, ParsedAttributes, Property, PropertyIter};
-pub use protocol::{ObjcProtocol, ProtocolIter, ProtocolNameIter};
-pub use refs::{ClassRefIter, ProtoRefIter, RefTarget, SelRefIter, SuperRefIter};
+pub use ivar::{Ivar, IvarIter, ivar_list_iter};
+pub use method::{Method, MethodIter, MethodKind, method_list_iter};
+pub use property::{ParsedAttribute, ParsedAttributes, Property, PropertyIter, property_list_iter};
+pub use protocol::{
+    ObjcProtocol, ProtocolIter, ProtocolNameIter, decode_protocol, protocol_name_iter,
+};
+pub use refs::{ClassRefIter, ProtoRefIter, RefTarget, SelRef, SelRefIter, SuperRefIter};
 
-pub(crate) use section::{ObjcSection, find_section};
+pub use section::{ObjcSection, find_section};
 
 /// Aggregate view over the Obj-C 2 runtime metadata embedded in a
 /// Mach-O image.
@@ -95,30 +100,30 @@ pub(crate) use section::{ObjcSection, find_section};
 /// §"Section names" (line 2381).
 #[derive(Debug)]
 pub struct ObjcRuntime<'a> {
-    pub(crate) data: &'a [u8],
+    data: &'a [u8],
     /// Cached `(vmaddr, vmsize, fileoff, filesize)` tuples for
     /// every segment with non-zero file backing - the input to
     /// [`vm_to_file_offset_in`]. Kept by value so the runtime
     /// outlives the originating [`MachoBinary`] borrow.
-    pub(crate) segments: Vec<(u64, u64, u64, u64)>,
+    segments: Vec<(u64, u64, u64, u64)>,
 
-    pub(crate) image_info: ImageInfo,
+    image_info: ImageInfo,
 
-    pub(crate) class_list: Option<ObjcSection<'a>>,
-    pub(crate) nlclslist: Option<ObjcSection<'a>>,
-    pub(crate) cat_list: Option<ObjcSection<'a>>,
-    pub(crate) nlcat_list: Option<ObjcSection<'a>>,
-    pub(crate) proto_list: Option<ObjcSection<'a>>,
+    class_list: Option<ObjcSection<'a>>,
+    nlclslist: Option<ObjcSection<'a>>,
+    cat_list: Option<ObjcSection<'a>>,
+    nlcat_list: Option<ObjcSection<'a>>,
+    proto_list: Option<ObjcSection<'a>>,
 
-    pub(crate) sel_refs: Option<ObjcSection<'a>>,
-    pub(crate) class_refs: Option<ObjcSection<'a>>,
-    pub(crate) super_refs: Option<ObjcSection<'a>>,
-    pub(crate) proto_refs: Option<ObjcSection<'a>>,
+    sel_refs: Option<ObjcSection<'a>>,
+    class_refs: Option<ObjcSection<'a>>,
+    super_refs: Option<ObjcSection<'a>>,
+    proto_refs: Option<ObjcSection<'a>>,
 
     /// `vm_address → (symbol_name, dylib)` for every chained-fixup
     /// bind in the image. Drives ref-section resolution for
     /// foreign-class / foreign-protocol pointers.
-    pub(crate) binds_by_va: HashMap<u64, (&'a str, &'a str)>,
+    binds_by_va: HashMap<u64, (&'a str, &'a str)>,
     /// `vm_address → canonical target VA` for every chained-fixup
     /// rebase. For images that use `LC_DYLD_CHAINED_FIXUPS`, the
     /// raw bytes in `__objc_classlist` / `__objc_protolist` etc.
@@ -126,7 +131,7 @@ pub struct ObjcRuntime<'a> {
     /// canonical target lives in [`Rebase::target_vmaddr`]. For
     /// legacy `LC_DYLD_INFO` images this map is empty and the
     /// walker falls back to PAC-stripping the raw slot value.
-    pub(crate) rebases_by_va: HashMap<u64, u64>,
+    rebases_by_va: HashMap<u64, u64>,
 }
 
 impl<'a> ObjcRuntime<'a> {
@@ -142,7 +147,7 @@ impl<'a> ObjcRuntime<'a> {
     ///   no ObjC content.
     /// - `__objc_imageinfo` was found but its body is truncated
     ///   below the 8-byte minimum.
-    pub(crate) fn build(bin: &MachoBinary<'a>) -> Option<Self> {
+    pub fn build(bin: &MachoBinary<'a>) -> Option<Self> {
         if !bin.header().is_64() {
             #[cfg(feature = "tracing")]
             tracing::debug!("darwinscope::objc: 32-bit Mach-O - Obj-C walker is 64-bit only");
@@ -159,24 +164,11 @@ impl<'a> ObjcRuntime<'a> {
         // for us, so we don't have to dispatch on which one was
         // emitted.
         //
-        // SAFETY w.r.t. lifetimes: `Import<'p>::name` and `dylib`
-        // are tied to the goblin `&self` borrow; we widen them to
-        // the data lifetime by reborrowing the underlying byte
-        // slice. The names live in `__LINKEDIT` for chained fixups
-        // and in `LC_SYMTAB.stroff` for legacy binds, both of which
-        // are addressable through `bin.raw()` (the `'a` slice).
-        // `Import.name` already points at those bytes; the cast
-        // here merely re-asserts the pre-existing aliasing.
+        // Both encodings name their symbols out of the image's own
+        // bytes, so `Import<'a>` already carries the data lifetime.
         let mut binds_by_va: HashMap<u64, (&'a str, &'a str)> = HashMap::new();
-        let data = bin.raw();
         for imp in bin.imports() {
-            let Some(name) = reborrow_into_data(data, imp.name) else {
-                continue;
-            };
-            let Some(dylib) = reborrow_into_data(data, imp.dylib) else {
-                continue;
-            };
-            binds_by_va.insert(imp.address, (name, dylib));
+            binds_by_va.insert(imp.address, (imp.name, imp.dylib));
         }
 
         let mut segments: Vec<(u64, u64, u64, u64)> = Vec::new();
@@ -241,7 +233,8 @@ impl<'a> ObjcRuntime<'a> {
         ConformanceIter::new(self)
     }
 
-    /// Selectors referenced at runtime via `__objc_selrefs`.
+    /// Selectors referenced at runtime via `__objc_selrefs`, each with its
+    /// slot.
     pub fn selector_refs(&self) -> SelRefIter<'a, '_> {
         SelRefIter::new(self)
     }
@@ -263,7 +256,7 @@ impl<'a> ObjcRuntime<'a> {
 
     /// Translate a virtual-memory address to its on-disk file
     /// offset using the cached segment table.
-    pub(crate) fn vm_to_file_offset(&self, vmaddr: u64) -> Option<u64> {
+    fn vm_to_file_offset(&self, vmaddr: u64) -> Option<u64> {
         vm_to_file_offset_in(self.segments.iter().copied(), vmaddr)
     }
 
@@ -274,7 +267,7 @@ impl<'a> ObjcRuntime<'a> {
     /// `__objc_methtype`. Returns `None` when the address fails to
     /// resolve through the segment table or when the bytes are not
     /// valid UTF-8.
-    pub(crate) fn read_cstr(&self, vmaddr: u64) -> Option<&'a str> {
+    fn read_cstr(&self, vmaddr: u64) -> Option<&'a str> {
         if vmaddr == 0 {
             return None;
         }
@@ -283,7 +276,7 @@ impl<'a> ObjcRuntime<'a> {
     }
 
     /// Read a little-endian `u32` at virtual address `vmaddr`.
-    pub(crate) fn read_u32(&self, vmaddr: u64) -> Option<u32> {
+    fn read_u32(&self, vmaddr: u64) -> Option<u32> {
         let off = self.vm_to_file_offset(vmaddr)? as usize;
         read_u32_le_at(self.data, off)
     }
@@ -294,14 +287,14 @@ impl<'a> ObjcRuntime<'a> {
     /// PAC-signed slots (`isa`, `superclass`, `imp`) should pipe
     /// through [`ptr_auth::strip_signature`](crate::ptr_auth::strip_signature)
     /// before dereferencing.
-    pub(crate) fn read_u64(&self, vmaddr: u64) -> Option<u64> {
+    fn read_u64(&self, vmaddr: u64) -> Option<u64> {
         let off = self.vm_to_file_offset(vmaddr)? as usize;
         read_u64_le_at(self.data, off)
     }
 
     /// Translate a VA into a file offset and return a slice of
     /// `len` bytes from that offset, or `None` on out-of-bounds.
-    pub(crate) fn read_bytes(&self, vmaddr: u64, len: usize) -> Option<&'a [u8]> {
+    fn read_bytes(&self, vmaddr: u64, len: usize) -> Option<&'a [u8]> {
         let off = self.vm_to_file_offset(vmaddr)? as usize;
         let end = off.checked_add(len)?;
         self.data.get(off..end)
@@ -322,48 +315,13 @@ impl<'a> ObjcRuntime<'a> {
     /// and return the canonical VA.
     ///
     /// Returns `None` if the slot can't be read.
-    pub(crate) fn resolve_pointer(&self, slot_va: u64) -> Option<u64> {
+    fn resolve_pointer(&self, slot_va: u64) -> Option<u64> {
         if let Some(&target) = self.rebases_by_va.get(&slot_va) {
             return Some(target);
         }
         let raw = self.read_u64(slot_va)?;
         Some(crate::ptrauth::strip_signature(raw))
     }
-}
-
-/// Re-borrow a `&str` slice that we know aliases somewhere inside
-/// `data`, returning a `&'a str` whose lifetime is the data
-/// lifetime.
-///
-/// This is the workaround for the lifetime-collapse documented in
-/// [`crate::import`] (line 19-29): `goblin::mach::MachO::imports`
-/// ties its name strings to the `&self` borrow rather than to the
-/// data lifetime, even though the bytes themselves live in
-/// `__LINKEDIT` / `LC_SYMTAB.stroff` and are addressable through
-/// `bin.raw()`. We locate the slice's pointer range inside `data`,
-/// reborrow at that range, and confirm the bytes still parse as
-/// valid UTF-8 (they always do - this is a sanity check, not a
-/// correctness guard).
-///
-/// Returns `None` when the slice does not lie inside `data` (which
-/// would indicate a goblin internal that allocated a fresh string,
-/// not aliasing the input bytes).
-fn reborrow_into_data<'a>(data: &'a [u8], s: &str) -> Option<&'a str> {
-    let s_ptr = s.as_ptr() as usize;
-    let s_len = s.len();
-    let data_start = data.as_ptr() as usize;
-    let data_end = data_start.checked_add(data.len())?;
-    if s_ptr < data_start {
-        return None;
-    }
-    let s_end = s_ptr.checked_add(s_len)?;
-    if s_end > data_end {
-        return None;
-    }
-    let off = s_ptr.checked_sub(data_start)?;
-    let end = off.checked_add(s_len)?;
-    let bytes = data.get(off..end)?;
-    core::str::from_utf8(bytes).ok()
 }
 
 /// Strip the canonical ObjC linker prefix from a chained-fixup bind
@@ -382,7 +340,7 @@ fn reborrow_into_data<'a>(data: &'a [u8], s: &str) -> Option<&'a str> {
 /// emit; cite `objc4/runtime/objc-private.h:99-105` and
 /// `clang/lib/CodeGen/CGObjCMac.cpp` (the `GetClassName` /
 /// `GetProtocolName` symbol-prefix functions).
-pub(crate) fn strip_objc_symbol_prefix(name: &str) -> &str {
+fn strip_objc_symbol_prefix(name: &str) -> &str {
     const PREFIXES: &[&str] = &[
         "_OBJC_CLASS_$_",
         "_OBJC_METACLASS_$_",

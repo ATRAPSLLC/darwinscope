@@ -59,7 +59,7 @@ impl ImageInfo {
     ///
     /// Returns `None` when the body is shorter than 8 bytes (every
     /// known ABI uses exactly 8).
-    pub(crate) fn parse(body: &[u8]) -> Option<Self> {
+    pub fn parse(body: &[u8]) -> Option<Self> {
         let version = read_u32_le_at(body, 0)?;
         let flags = read_u32_le_at(body, 4)?;
         Some(Self { version, flags })

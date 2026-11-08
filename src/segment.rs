@@ -43,7 +43,7 @@ pub struct Segment<'a, 'p> {
 }
 
 impl<'a, 'p> Segment<'a, 'p> {
-    pub(crate) fn new(inner: &'p GoblinSegment<'a>) -> Self {
+    fn new(inner: &'p GoblinSegment<'a>) -> Self {
         Self { inner }
     }
 
@@ -133,7 +133,8 @@ pub struct SegmentIter<'a, 'p> {
 }
 
 impl<'a, 'p> SegmentIter<'a, 'p> {
-    pub(crate) fn new(slice: &'p [GoblinSegment<'a>]) -> Self {
+    /// The iterator over `slice`, the image's segment table.
+    pub fn new(slice: &'p [GoblinSegment<'a>]) -> Self {
         Self {
             inner: slice.iter(),
         }
@@ -297,7 +298,9 @@ pub struct SectionIter<'a, 'p> {
 }
 
 impl<'a, 'p> SectionIter<'a, 'p> {
-    pub(crate) fn new(slice: &'p [GoblinSegment<'a>]) -> Self {
+    /// The iterator over every section of every segment in `slice`,
+    /// in segment order.
+    pub fn new(slice: &'p [GoblinSegment<'a>]) -> Self {
         Self {
             segments: SegmentSource::All(slice.iter()),
             current: None,

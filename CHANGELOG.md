@@ -7,6 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0]
+
+Exports and imports are no longer read through goblin: this release
+decodes the export trie and the legacy bind-opcode streams in-house, to
+the same standard as the rest of the crate (bounded reads, no recursion
+the input controls, fail-soft per row). Both decoders are checked
+against goblin's on the fixtures, so the rows they state are the rows
+they stated before.
+
+### Added
+
+- An in-house export-trie walker in `export`. It is iterative (an
+  explicit stack, so no input-controlled recursion depth), visits each
+  node offset once (an edge pointing back up the trie cannot loop it),
+  reads only inside the trie's byte range and inside each node's stated
+  terminal payload, and ends a single branch - not the walk - on a node
+  it cannot read. `ExportInfo::Reexport` now also carries the
+  `lib_ordinal` the trie node states.
+- An in-house bind-opcode interpreter in `import`, exposed as
+  `BindStream` over a `BindImage` of `BindSegment`s. It runs dyld's
+  opcode state machine lazily, one row per bind as the consumer pulls
+  it, and refuses what dyld refuses: a bind into a segment the image
+  does not have or to a slot that does not fit inside its segment (this
+  also bounds every repeat count), an opcode dyld does not know, and the
+  threaded-bind opcode whose rows belong to a chain this interpreter
+  does not walk.
+- `ObjcRuntime::selector_refs()` yields the new `SelRef`, pairing each
+  `__objc_selrefs` slot's address with the selector it names. The slot
+  address is what a cross-reference index needs.
+- `dylib::dylib_ordinals()` builds the image's dylib ordinal table: one
+  install name per dependency load command, in load-command order, so
+  entry `n - 1` is library ordinal `n` as dyld numbers it. A command
+  whose name cannot be read keeps its slot, because dropping it would
+  shift every later ordinal onto the wrong library.
+- `fixup::resolve_lib_ordinal()` is now the one resolver for every
+  encoding that names a library by ordinal - chained-fixup imports,
+  legacy bind opcodes and export-trie re-exports - over `i64`, so the
+  special self / main-executable / flat-namespace / weak ordinals and an
+  out-of-range one answer the same way everywhere.
+- `SwiftRuntime::has_mangled_name_pool()` reports `__swift5_typeref`,
+  the member that was missing from the presence-accessor family.
+- `VTableIter`, `OverrideEntryIter`, `DefaultOverrideEntryIter` and
+  `PrespecializationIter` gained `new(rt, base_va, count)`.
+
+### Changed
+
+- **Breaking.** `ObjcRuntime::selector_refs()` yields `SelRef` instead
+  of `&str`; the selector is `SelRef::selector`.
+- **Breaking.** `ExportInfo::Reexport::lib` is `Option<&str>`: `None`
+  when no load command holds the re-export's library ordinal, which the
+  new `lib_ordinal` field states regardless.
+- `MachoBinary::exports()` and `::imports()` return iterators bound to
+  the image's data lifetime rather than to the `&self` borrow, so their
+  rows can outlive the borrow that produced them.
+- `exports()` follows dyld's precedence explicitly: the
+  `LC_DYLD_EXPORTS_TRIE` trie when the image carries one, else the
+  `LC_DYLD_INFO[_ONLY]` export trie.
+- Restricted visibility is gone from the crate. `pub(crate)` and
+  `pub(super)` are no longer used anywhere: an item is either
+  module-private or `pub` and reachable from the crate root through a
+  `pub mod` or an explicit re-export, and `unreachable_pub = "deny"`
+  keeps it that way. Of the 204 restricted declarations, the ones used
+  only inside their own module became private; the cross-module ones
+  became public API, among them the section finders, the Obj-C list
+  walkers and the Swift trailing-object decoders.
+
+### Fixed
+
+- Public items with no public path. The Obj-C `FAST_IS_SWIFT_LEGACY` /
+  `FAST_IS_SWIFT_STABLE` / `FAST_HAS_DEFAULT_RR` constants and the Swift
+  `ClassBody` / `StructBody` / `EnumBody` types were `pub` inside
+  private modules, so no consumer could name them - `ClassBody` not even
+  in the rendered docs, where `TypeKindBody::Class(ClassBody)` links to
+  it.
+- The README linked to a `ToDo.md` that is not part of the repository,
+  the same dead-link class fixed for the crate docs in 0.1.1. Its
+  feature table was also missing the `LC_DATA_IN_CODE`, compact-unwind
+  and Blocks surfaces that 0.1.3 and 0.1.4 added.
+- Doc comments describing a goblin lifetime collapse that no longer
+  applies now that neither bind encoding goes through goblin.
+
 ## [0.1.4]
 
 ### Added
@@ -92,6 +173,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release.
 
+[0.2.0]: https://github.com/ATRAPSLLC/darwinscope/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/ATRAPSLLC/darwinscope/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/ATRAPSLLC/darwinscope/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/ATRAPSLLC/darwinscope/compare/v0.1.1...v0.1.2

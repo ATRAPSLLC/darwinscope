@@ -56,8 +56,7 @@ pub const CSMAGIC_EMBEDDED_DER_ENTITLEMENTS: u32 = 0xfade_7172;
 pub const CSMAGIC_BLOBWRAPPER: u32 = 0xfade_0b01;
 
 /// Header size of every blob: `magic` (BE u32) + `length` (BE u32).
-#[allow(dead_code)] // used by CodeDirectory / Entitlements parsers in subsequent PRs.
-pub(crate) const BLOB_HEADER_SIZE: usize = 8;
+const BLOB_HEADER_SIZE: usize = 8;
 /// Size of the SuperBlob header before the index array.
 const SUPERBLOB_HEADER_SIZE: usize = 12;
 /// Size of one `CS_BlobIndex` entry: `type` (BE u32) + `offset`
@@ -266,8 +265,7 @@ impl<'a> Signature<'a> {
 
     /// Find the blob slot's payload bytes (header + body), if the
     /// SuperBlob has an entry for that slot.
-    #[allow(dead_code)] // used by CodeDirectory / Entitlements / Requirements parsers.
-    pub(crate) fn find_blob_bytes(&self, target: Slot) -> Option<&'a [u8]> {
+    fn find_blob_bytes(&self, target: Slot) -> Option<&'a [u8]> {
         for idx in self.blobs() {
             if idx.slot == target {
                 return self.blob_bytes_at(idx.offset);
@@ -276,8 +274,7 @@ impl<'a> Signature<'a> {
         None
     }
 
-    #[allow(dead_code)] // used by CodeDirectory / Entitlements / Requirements parsers.
-    pub(crate) fn blob_bytes_at(&self, offset: u32) -> Option<&'a [u8]> {
+    fn blob_bytes_at(&self, offset: u32) -> Option<&'a [u8]> {
         let abs = self.base.checked_add(offset as usize)?;
         let header = self.data.get(abs..abs.checked_add(BLOB_HEADER_SIZE)?)?;
         let blob_len = read_u32_be_at(header, 4)? as usize;
@@ -1522,26 +1519,46 @@ fn der_read_header(buf: &[u8]) -> Option<DerHeader> {
 // field is big-endian, like the rest of the code-signing payload.
 
 /// `exprForm` opcode values (Apple `requirement.h` `ExprOp`).
-mod req_op {
+pub mod req_op {
+    /// `never`: the requirement is unsatisfiable.
     pub const FALSE: u32 = 0;
+    /// `always`: the requirement is satisfied by anything.
     pub const TRUE: u32 = 1;
+    /// `identifier "x"`: the signing identifier must equal a string.
     pub const IDENT: u32 = 2;
+    /// `anchor apple`: the chain must end at an Apple root.
     pub const APPLE_ANCHOR: u32 = 3;
+    /// `anchor = H"..."`: the anchor certificate's hash.
     pub const ANCHOR_HASH: u32 = 4;
+    /// `info[key] = "value"`: an `Info.plist` key comparison.
     pub const INFO_KEY_VALUE: u32 = 5;
+    /// `and`: both sub-expressions must hold.
     pub const AND: u32 = 6;
+    /// `or`: either sub-expression may hold.
     pub const OR: u32 = 7;
+    /// `cdhash H"..."`: the CodeDirectory hash.
     pub const CD_HASH: u32 = 8;
+    /// `!`: negates the sub-expression.
     pub const NOT: u32 = 9;
+    /// `info[key] <match>`: an `Info.plist` field with a match suffix.
     pub const INFO_KEY_FIELD: u32 = 10;
+    /// `certificate[n][field] <match>`: a certificate field.
     pub const CERT_FIELD: u32 = 11;
+    /// `certificate[n] trusted`: one certificate's trust setting.
     pub const TRUSTED_CERT: u32 = 12;
+    /// `anchor trusted`: the whole chain's trust setting.
     pub const TRUSTED_CERTS: u32 = 13;
+    /// `certificate[n][oid] <match>`: a certificate field by OID.
     pub const CERT_GENERIC: u32 = 14;
+    /// `anchor apple generic`: an Apple-issued anchor of any kind.
     pub const APPLE_GENERIC_ANCHOR: u32 = 15;
+    /// `entitlement[key] <match>`: an entitlement field.
     pub const ENTITLEMENT_FIELD: u32 = 16;
+    /// `certificate[n][policy] <match>`: a certificate policy OID.
     pub const CERT_POLICY: u32 = 17;
+    /// `anchor apple <name>`: a named Apple anchor.
     pub const NAMED_ANCHOR: u32 = 18;
+    /// `(name)`: a named requirement from the enclosing set.
     pub const NAMED_CODE: u32 = 19;
 }
 
@@ -1551,15 +1568,24 @@ const REQ_OP_GENERIC_FALSE: u32 = 0x8000_0000;
 const REQ_OP_GENERIC_SKIP: u32 = 0x4000_0000;
 
 /// Match-suffix opcodes for field comparisons (`MatchOperation`).
-mod match_op {
+pub mod match_op {
+    /// `exists`: the field is present, whatever its value.
     pub const EXISTS: u32 = 0;
+    /// `= "value"`: the field equals a string.
     pub const EQUAL: u32 = 1;
+    /// `~ "value"`: the field contains a substring.
     pub const CONTAINS: u32 = 2;
+    /// `= "value*"`: the field starts with a prefix.
     pub const BEGINS_WITH: u32 = 3;
+    /// `= "*value"`: the field ends with a suffix.
     pub const ENDS_WITH: u32 = 4;
+    /// `< "value"`: the field sorts before a string.
     pub const LESS_THAN: u32 = 5;
+    /// `> "value"`: the field sorts after a string.
     pub const GREATER_THAN: u32 = 6;
+    /// `<= "value"`: the field sorts at or before a string.
     pub const LESS_EQUAL: u32 = 7;
+    /// `>= "value"`: the field sorts at or after a string.
     pub const GREATER_EQUAL: u32 = 8;
 }
 

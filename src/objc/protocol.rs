@@ -61,19 +61,19 @@ const PROTOCOL_FIELD_CLASS_PROPERTIES_OFFSET: u32 = 88;
 /// do not have to special-case the size check.
 #[derive(Debug, Clone)]
 pub struct ObjcProtocol<'a, 'p> {
-    pub(crate) rt: &'p ObjcRuntime<'a>,
-    pub(crate) address: u64,
+    rt: &'p ObjcRuntime<'a>,
+    address: u64,
 
-    pub(crate) name: &'a str,
-    pub(crate) instance_methods_va: u64,
-    pub(crate) class_methods_va: u64,
-    pub(crate) optional_instance_methods_va: u64,
-    pub(crate) optional_class_methods_va: u64,
-    pub(crate) instance_properties_va: u64,
-    pub(crate) class_properties_va: Option<u64>,
-    pub(crate) protocols_va: u64,
-    pub(crate) size: u32,
-    pub(crate) flags: u32,
+    name: &'a str,
+    instance_methods_va: u64,
+    class_methods_va: u64,
+    optional_instance_methods_va: u64,
+    optional_class_methods_va: u64,
+    instance_properties_va: u64,
+    class_properties_va: Option<u64>,
+    protocols_va: u64,
+    size: u32,
+    flags: u32,
 }
 
 impl<'a, 'p> ObjcProtocol<'a, 'p> {
@@ -146,7 +146,8 @@ pub struct ProtocolIter<'a, 'p> {
 }
 
 impl<'a, 'p> ProtocolIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p ObjcRuntime<'a>) -> Self {
+    /// The iterator over `__objc_protolist` of `rt`.
+    pub fn new(rt: &'p ObjcRuntime<'a>) -> Self {
         let (cursor, end) = match rt.proto_list {
             Some(s) => (0u64, s.body.len() as u64),
             None => (0u64, 0u64),
@@ -188,7 +189,9 @@ impl<'a, 'p> Iterator for ProtocolIter<'a, 'p> {
     }
 }
 
-pub(crate) fn decode_protocol<'a, 'p>(
+/// Decodes the `protocol_t` at `protocol_va` in `rt`, `None` when it
+/// is unreadable.
+pub fn decode_protocol<'a, 'p>(
     rt: &'p ObjcRuntime<'a>,
     proto_va: u64,
 ) -> Option<ObjcProtocol<'a, 'p>> {
@@ -271,7 +274,7 @@ pub struct ProtocolNameIter<'a, 'p> {
 }
 
 impl<'a, 'p> ProtocolNameIter<'a, 'p> {
-    pub(crate) fn empty(rt: &'p ObjcRuntime<'a>) -> Self {
+    fn empty(rt: &'p ObjcRuntime<'a>) -> Self {
         Self {
             rt,
             list_base: None,
@@ -282,7 +285,9 @@ impl<'a, 'p> ProtocolNameIter<'a, 'p> {
     }
 }
 
-pub(crate) fn protocol_name_iter<'a, 'p>(
+/// The iterator over the protocol names of the `protocol_list_t` at
+/// `list_va` in `rt`, empty when the address is null or unreadable.
+pub fn protocol_name_iter<'a, 'p>(
     rt: &'p ObjcRuntime<'a>,
     list_va: u64,
 ) -> ProtocolNameIter<'a, 'p> {

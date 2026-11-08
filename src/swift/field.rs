@@ -60,13 +60,13 @@ const FIELD_DESCRIPTOR_HEADER_SIZE: u64 = 16;
 /// fits in the low bits.
 #[derive(Debug)]
 pub struct FieldDescriptor<'a, 'p> {
-    pub(crate) rt: &'p SwiftRuntime<'a>,
-    pub(crate) address: u64,
-    pub(crate) mangled_type_name: Option<&'a str>,
-    pub(crate) superclass_mangled_name: Option<&'a str>,
-    pub(crate) kind: FieldDescriptorKind,
-    pub(crate) field_record_size: u16,
-    pub(crate) num_fields: u32,
+    rt: &'p SwiftRuntime<'a>,
+    address: u64,
+    mangled_type_name: Option<&'a str>,
+    superclass_mangled_name: Option<&'a str>,
+    kind: FieldDescriptorKind,
+    field_record_size: u16,
+    num_fields: u32,
 }
 
 impl<'a, 'p> FieldDescriptor<'a, 'p> {
@@ -124,9 +124,9 @@ impl<'a, 'p> FieldDescriptor<'a, 'p> {
 /// One `TargetFieldRecord` entry inside a [`FieldDescriptor`].
 #[derive(Debug, Clone)]
 pub struct FieldRecord<'a> {
-    pub(crate) flags: FieldRecordFlags,
-    pub(crate) mangled_type_name: Option<&'a str>,
-    pub(crate) field_name: Option<&'a str>,
+    flags: FieldRecordFlags,
+    mangled_type_name: Option<&'a str>,
+    field_name: Option<&'a str>,
 }
 
 impl<'a> FieldRecord<'a> {
@@ -157,7 +157,8 @@ pub struct FieldIter<'a, 'p> {
 }
 
 impl<'a, 'p> FieldIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p SwiftRuntime<'a>) -> Self {
+    /// The iterator over `__swift5_fieldmd` of `rt`.
+    pub fn new(rt: &'p SwiftRuntime<'a>) -> Self {
         Self { rt, cursor: 0 }
     }
 }

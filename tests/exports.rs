@@ -88,3 +88,23 @@ fn export_offset_field_populated_for_regular_exports() {
         }
     }
 }
+
+/// Every fixture's exports are the exports goblin's walker states for
+/// it (an independent decoder of the same trie).
+#[test]
+fn exports_match_goblin() {
+    for path in [ARM64_PATH, LEGACY_PATH] {
+        let bytes = load(path);
+        let bin = MachoBinary::parse(&bytes).unwrap();
+        let ours: Vec<_> = bin.exports().map(|e| (e.name, e.offset)).collect();
+        let goblin = goblin::mach::MachO::parse(&bytes, 0).unwrap();
+        let theirs: Vec<_> = goblin
+            .exports()
+            .unwrap()
+            .into_iter()
+            .map(|e| (e.name, e.offset))
+            .collect();
+        assert!(!theirs.is_empty(), "{path}");
+        assert_eq!(ours, theirs, "{path}");
+    }
+}

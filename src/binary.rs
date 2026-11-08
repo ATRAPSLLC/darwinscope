@@ -20,14 +20,15 @@
 //!    3-component shape, so the public API exposes a distinct
 //!    [`SourceVersion`] type instead of [`Version`].
 
-use core::convert::TryFrom;
+use core::{convert::TryFrom, ops::Range};
+use std::sync::Arc;
 
 use goblin::mach::{
     Mach, MachO,
     load_command::{
-        CommandVariant, LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_MACOSX, LC_VERSION_MIN_TVOS,
-        LC_VERSION_MIN_WATCHOS, LinkeditDataCommand, PLATFORM_IOS, PLATFORM_MACOS, PLATFORM_TVOS,
-        PLATFORM_WATCHOS,
+        CommandVariant, DyldInfoCommand, LC_VERSION_MIN_IPHONEOS, LC_VERSION_MIN_MACOSX,
+        LC_VERSION_MIN_TVOS, LC_VERSION_MIN_WATCHOS, LinkeditDataCommand, PLATFORM_IOS,
+        PLATFORM_MACOS, PLATFORM_TVOS, PLATFORM_WATCHOS,
     },
 };
 
@@ -38,14 +39,14 @@ use crate::{
     cfstring::CFStringRuntime,
     codesign::Signature,
     dataincode::DataInCodeIter,
-    dylib::{DylibIter, LoadCommandIter},
+    dylib::{DylibIter, LoadCommandIter, dylib_ordinals},
     error::{Error, Result},
     export::ExportIter,
     fixup::{
         BindIter, ChainedFixups, ChainedImport, RebaseIter, SegmentLoc, build_bind_iter,
         build_rebase_iter,
     },
-    import::{Import, ImportIter},
+    import::{BindImage, BindSegment, BindStream, Import, ImportIter},
     objc::ObjcRuntime,
     segment::{SectionIter, SegmentIter},
     swift::SwiftRuntime,
@@ -95,6 +96,12 @@ pub struct MachoBinary<'a> {
     data_in_code_cmd: Option<LinkeditDataCommand>,
     chained_fixups_cmd: Option<LinkeditDataCommand>,
     code_signature_cmd: Option<LinkeditDataCommand>,
+    /// The first `LC_DYLD_INFO[_ONLY]`: the legacy bind streams and
+    /// export trie.
+    dyld_info_cmd: Option<DyldInfoCommand>,
+    /// The first `LC_DYLD_EXPORTS_TRIE`, which dyld prefers over the
+    /// `LC_DYLD_INFO` export trie.
+    exports_trie_cmd: Option<LinkeditDataCommand>,
 }
 
 impl<'a> MachoBinary<'a> {
@@ -171,6 +178,8 @@ impl<'a> MachoBinary<'a> {
         let mut data_in_code_cmd = None;
         let mut chained_fixups_cmd = None;
         let mut code_signature_cmd = None;
+        let mut dyld_info_cmd = None;
+        let mut exports_trie_cmd = None;
 
         for lc in &macho.load_commands {
             match &lc.command {
@@ -259,6 +268,12 @@ impl<'a> MachoBinary<'a> {
                 CommandVariant::CodeSignature(c) => {
                     code_signature_cmd = Some(*c);
                 }
+                CommandVariant::DyldInfo(c) | CommandVariant::DyldInfoOnly(c) => {
+                    dyld_info_cmd = dyld_info_cmd.or(Some(*c));
+                }
+                CommandVariant::DyldExportsTrie(c) => {
+                    exports_trie_cmd = exports_trie_cmd.or(Some(*c));
+                }
                 _ => {}
             }
         }
@@ -278,6 +293,8 @@ impl<'a> MachoBinary<'a> {
             data_in_code_cmd,
             chained_fixups_cmd,
             code_signature_cmd,
+            dyld_info_cmd,
+            exports_trie_cmd,
         };
         // Pre-walk the function-starts stream so Header can answer
         // `function_starts_count()` cheaply.
@@ -441,21 +458,28 @@ impl<'a> MachoBinary<'a> {
 
     /// Iterator over exports - symbols this image publishes to dyld.
     ///
-    /// Walks both `LC_DYLD_EXPORTS_TRIE` (modern, standalone) and
-    /// `LC_DYLD_INFO[_ONLY].export_*` (legacy). Returns the empty
-    /// iterator when neither is present or when the trie failed to
-    /// decode.
-    pub fn exports(&self) -> ExportIter<'_> {
-        let items = self.macho.exports().unwrap_or_default();
-        ExportIter::new(items)
+    /// Walks the `LC_DYLD_EXPORTS_TRIE` trie when the image has one,
+    /// else the `LC_DYLD_INFO[_ONLY].export_*` trie (dyld's
+    /// precedence), with the bounded walker of [`crate::export`].
+    /// Returns the empty iterator when neither is present or the
+    /// trie's range lies outside the image.
+    pub fn exports(&self) -> ExportIter<'a> {
+        let range = match (self.exports_trie_cmd, self.dyld_info_cmd) {
+            (Some(trie), _) => byte_range(trie.dataoff, trie.datasize),
+            (None, Some(info)) => byte_range(info.export_off, info.export_size),
+            (None, None) => None,
+        };
+        let dylibs = dylib_ordinals(self.data, &self.macho.load_commands);
+        ExportIter::new(self.data, range, &dylibs)
     }
 
     /// Iterator over dyld bind targets (imports).
     ///
     /// Folds two on-disk encodings into a single sequence:
     ///
-    /// 1. **Legacy** `LC_DYLD_INFO[_ONLY]` bind-opcode rows
-    ///    (decoded by goblin).
+    /// 1. **Legacy** `LC_DYLD_INFO[_ONLY]` bind-opcode rows, the
+    ///    non-lazy stream then the lazy one (interpreted lazily by
+    ///    [`crate::import`]).
     /// 2. **Chained** binds from `LC_DYLD_CHAINED_FIXUPS` (decoded
     ///    in-house by [`crate::fixup`]).
     ///
@@ -463,26 +487,38 @@ impl<'a> MachoBinary<'a> {
     /// exactly one encoding (never both), so consumers can treat
     /// the iterator as a flat list without dispatching on which
     /// encoding produced each row.
-    pub fn imports(&self) -> ImportIter<'_> {
-        let mut all: Vec<Import<'_>> = Vec::new();
-        if let Ok(items) = self.macho.imports() {
-            for g in items {
-                all.push(Import {
-                    name: g.name,
-                    dylib: g.dylib,
-                    is_lazy: g.is_lazy,
-                    is_weak: g.is_weak,
-                    offset: g.offset,
-                    size: g.size,
-                    address: g.address,
-                    addend: g.addend,
-                    bind_offset: g.start_of_sequence_offset,
-                });
+    pub fn imports(&self) -> ImportIter<'a> {
+        let mut legacy = Vec::new();
+        if let Some(info) = self.dyld_info_cmd {
+            let image = Arc::new(BindImage {
+                data: self.data,
+                segments: self
+                    .macho
+                    .segments
+                    .iter()
+                    .map(|s| BindSegment {
+                        vmaddr: s.vmaddr,
+                        vmsize: s.vmsize,
+                        fileoff: s.fileoff,
+                        filesize: s.filesize,
+                    })
+                    .collect(),
+                dylibs: dylib_ordinals(self.data, &self.macho.load_commands),
+                pointer_size: if self.macho.is_64 { 8 } else { 4 },
+            });
+            for (off, size, is_lazy) in [
+                (info.bind_off, info.bind_size, false),
+                (info.lazy_bind_off, info.lazy_bind_size, true),
+            ] {
+                if let Some(range) = byte_range(off, size) {
+                    legacy.push(BindStream::new(Arc::clone(&image), range, is_lazy));
+                }
             }
         }
+        let mut chained: Vec<Import<'a>> = Vec::new();
         for b in self.chained_binds() {
             let offset = self.vm_to_file_offset(b.vm_address()).unwrap_or(0);
-            all.push(Import {
+            chained.push(Import {
                 name: b.name(),
                 dylib: b.dylib(),
                 // Chained binds are non-lazy by construction -
@@ -496,7 +532,7 @@ impl<'a> MachoBinary<'a> {
                 bind_offset: 0,
             });
         }
-        ImportIter::new(all)
+        ImportIter::new(legacy, chained)
     }
 
     /// Decoded `LC_DYLD_CHAINED_FIXUPS` walker, if the load command
@@ -551,7 +587,7 @@ impl<'a> MachoBinary<'a> {
             return BindIter::empty();
         }
         let imports: Vec<ChainedImport<'a>> = cf.imports().collect();
-        let dylib_names: Vec<&'a str> = self.dylibs().map(|d| d.name).collect();
+        let dylib_names = dylib_ordinals(self.data, &self.macho.load_commands);
         build_bind_iter(self.data, &cf, &locs, image_base, &imports, &dylib_names)
     }
 
@@ -975,11 +1011,19 @@ fn u32_from_usize(n: usize) -> Result<u32> {
     u32::try_from(n).map_err(|_| Error::Structural(format!("count {n} exceeds u32")))
 }
 
+/// The byte range a load command's `(offset, size)` pair states, `None`
+/// when its end overflows. The caller bounds it against the image.
+fn byte_range(off: u32, size: u32) -> Option<Range<usize>> {
+    let start = usize::try_from(off).ok()?;
+    let end = start.checked_add(usize::try_from(size).ok()?)?;
+    Some(start..end)
+}
+
 /// Read a NUL-terminated `LcStr` body. `off` is the absolute byte
 /// offset into `data` where the string begins; `end` is the
 /// load-command boundary so we don't run off the edge on malformed
 /// input.
-pub(crate) fn read_lc_str(data: &[u8], off: usize, end: usize) -> Option<&str> {
+pub fn read_lc_str(data: &[u8], off: usize, end: usize) -> Option<&str> {
     let limit = end.min(data.len());
     let slice = data.get(off..limit)?;
     let len = slice.iter().position(|&b| b == 0).unwrap_or(slice.len());

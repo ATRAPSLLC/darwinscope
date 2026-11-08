@@ -70,19 +70,20 @@ impl VTableEntry {
 
 /// Iterator over `TargetMethodDescriptor[VTableSize]`.
 pub struct VTableIter<'a, 'p> {
-    pub(crate) rt: &'p SwiftRuntime<'a>,
-    pub(crate) base_va: u64,
-    pub(crate) count: u32,
-    pub(crate) cursor: u32,
+    rt: &'p SwiftRuntime<'a>,
+    base_va: u64,
+    count: u32,
+    cursor: u32,
 }
 
 impl<'a, 'p> VTableIter<'a, 'p> {
-    #[allow(dead_code)] // Reserved for explicit-empty construction by future PRs.
-    pub(crate) fn empty(rt: &'p SwiftRuntime<'a>) -> Self {
+    /// The iterator over `count` `TargetMethodDescriptor` entries starting at `base_va`. A
+    /// `count` of zero yields nothing.
+    pub fn new(rt: &'p SwiftRuntime<'a>, base_va: u64, count: u32) -> Self {
         Self {
             rt,
-            base_va: 0,
-            count: 0,
+            base_va,
+            count,
             cursor: 0,
         }
     }
@@ -139,19 +140,20 @@ pub struct OverrideEntry {
 
 /// Iterator over `TargetMethodOverrideDescriptor[NumEntries]`.
 pub struct OverrideEntryIter<'a, 'p> {
-    pub(crate) rt: &'p SwiftRuntime<'a>,
-    pub(crate) base_va: u64,
-    pub(crate) count: u32,
-    pub(crate) cursor: u32,
+    rt: &'p SwiftRuntime<'a>,
+    base_va: u64,
+    count: u32,
+    cursor: u32,
 }
 
 impl<'a, 'p> OverrideEntryIter<'a, 'p> {
-    #[allow(dead_code)] // Reserved for explicit-empty construction by future PRs.
-    pub(crate) fn empty(rt: &'p SwiftRuntime<'a>) -> Self {
+    /// The iterator over `count` override-table entries starting at `base_va`. A
+    /// `count` of zero yields nothing.
+    pub fn new(rt: &'p SwiftRuntime<'a>, base_va: u64, count: u32) -> Self {
         Self {
             rt,
-            base_va: 0,
-            count: 0,
+            base_va,
+            count,
             cursor: 0,
         }
     }
@@ -213,19 +215,20 @@ pub struct DefaultOverrideEntry {
 
 /// Iterator over default-override-table entries.
 pub struct DefaultOverrideEntryIter<'a, 'p> {
-    pub(crate) rt: &'p SwiftRuntime<'a>,
-    pub(crate) base_va: u64,
-    pub(crate) count: u32,
-    pub(crate) cursor: u32,
+    rt: &'p SwiftRuntime<'a>,
+    base_va: u64,
+    count: u32,
+    cursor: u32,
 }
 
 impl<'a, 'p> DefaultOverrideEntryIter<'a, 'p> {
-    #[allow(dead_code)] // Reserved for explicit-empty construction by future PRs.
-    pub(crate) fn empty(rt: &'p SwiftRuntime<'a>) -> Self {
+    /// The iterator over `count` default-override-table entries starting at `base_va`. A
+    /// `count` of zero yields nothing.
+    pub fn new(rt: &'p SwiftRuntime<'a>, base_va: u64, count: u32) -> Self {
         Self {
             rt,
-            base_va: 0,
-            count: 0,
+            base_va,
+            count,
             cursor: 0,
         }
     }

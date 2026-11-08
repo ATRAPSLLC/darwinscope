@@ -51,7 +51,9 @@ pub struct ReplacementIter<'a, 'p> {
 }
 
 impl<'a, 'p> ReplacementIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p SwiftRuntime<'a>) -> Self {
+    /// The iterator over `__swift5_replace` / `__swift5_replac2` of
+    /// `rt`.
+    pub fn new(rt: &'p SwiftRuntime<'a>) -> Self {
         Self {
             rt,
             cursor: 0,

@@ -29,14 +29,14 @@ use crate::{
 /// One Swift protocol descriptor.
 #[derive(Debug)]
 pub struct SwiftProtocol<'a, 'p> {
-    pub(crate) rt: &'p SwiftRuntime<'a>,
-    pub(crate) address: u64,
-    pub(crate) flags: ContextDescriptorFlags,
-    pub(crate) parent_va: u64,
-    pub(crate) name: &'a str,
-    pub(crate) num_requirements_in_signature: u32,
-    pub(crate) num_requirements: u32,
-    pub(crate) associated_type_names: Option<&'a str>,
+    rt: &'p SwiftRuntime<'a>,
+    address: u64,
+    flags: ContextDescriptorFlags,
+    parent_va: u64,
+    name: &'a str,
+    num_requirements_in_signature: u32,
+    num_requirements: u32,
+    associated_type_names: Option<&'a str>,
 }
 
 impl<'a, 'p> SwiftProtocol<'a, 'p> {
@@ -90,7 +90,8 @@ pub struct ProtocolIter<'a, 'p> {
 }
 
 impl<'a, 'p> ProtocolIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p SwiftRuntime<'a>) -> Self {
+    /// The iterator over `__swift5_protos` of `rt`.
+    pub fn new(rt: &'p SwiftRuntime<'a>) -> Self {
         Self { rt, cursor: 0 }
     }
 }
