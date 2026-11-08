@@ -62,7 +62,7 @@ pub enum ContextDescriptorKind {
 impl ContextDescriptorKind {
     /// Decode a raw 5-bit kind value (the low bits of
     /// `ContextDescriptorFlags`).
-    pub(crate) fn from_bits(raw: u8) -> Self {
+    fn from_bits(raw: u8) -> Self {
         match raw & 0x1F {
             0 => Self::Module,
             1 => Self::Extension,
@@ -157,7 +157,7 @@ pub enum MetadataInitializationKind {
 }
 
 impl MetadataInitializationKind {
-    pub(crate) fn from_bits(raw: u8) -> Self {
+    fn from_bits(raw: u8) -> Self {
         match raw & 0x3 {
             0 => Self::None,
             1 => Self::Singleton,
@@ -303,7 +303,7 @@ pub enum TypeReferenceKind {
 }
 
 impl TypeReferenceKind {
-    pub(crate) fn from_bits(raw: u8) -> Self {
+    fn from_bits(raw: u8) -> Self {
         match raw & 0x7 {
             0 => Self::DirectTypeDescriptor,
             1 => Self::IndirectTypeDescriptor,
@@ -418,7 +418,9 @@ pub enum FieldDescriptorKind {
 }
 
 impl FieldDescriptorKind {
-    pub(crate) fn from_bits(raw: u16) -> Self {
+    /// Reads the kind from a field descriptor's `kind` field,
+    /// keeping an unknown value as [`Self::Other`].
+    pub fn from_bits(raw: u16) -> Self {
         match raw {
             0 => Self::Struct,
             1 => Self::Class,
@@ -485,7 +487,7 @@ pub enum SwiftMethodKind {
 }
 
 impl SwiftMethodKind {
-    pub(crate) fn from_bits(raw: u8) -> Self {
+    fn from_bits(raw: u8) -> Self {
         match raw & 0xF {
             0 => Self::Method,
             1 => Self::Init,

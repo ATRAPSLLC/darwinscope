@@ -19,6 +19,8 @@ metadata.
 | Exports                       | export trie / `LC_DYLD_EXPORTS_TRIE`                |
 | Dylibs                        | `LC_LOAD_DYLIB` family                              |
 | Function entry points         | `LC_FUNCTION_STARTS` (ULEB128 deltas)               |
+| Data ranges inside code       | `LC_DATA_IN_CODE`                                   |
+| Compact unwind + LSDAs        | `__TEXT,__unwind_info`, `__gcc_except_tab`          |
 | Code-signing identity         | `LC_CODE_SIGNATURE` SuperBlob → CodeDirectory       |
 | Entitlements                  | `LC_CODE_SIGNATURE` SuperBlob → entitlements blob   |
 | Obj-C classes / metaclasses   | `__objc_classlist`, `__objc_nlclslist`              |
@@ -36,6 +38,7 @@ metadata.
 | Swift fields                  | `__swift5_fieldmd`                                  |
 | Swift class vtables           | trailing region of class `TargetTypeContextDescriptor` |
 | CFString constants            | `__cfstring`                                        |
+| Blocks-runtime metadata       | `_NSConcrete{Global,Stack}Block` binds, `Block_descriptor_{1,2,3}` |
 
 Pointer authentication (PAC) and `LC_DYLD_CHAINED_FIXUPS` are handled
 transparently - every pointer the walkers expose is the canonical
@@ -43,8 +46,9 @@ unauthenticated virtual address.
 
 ## Status
 
-v0.1 is under active development - see [`ToDo.md`](./ToDo.md) for the
-roadmap.
+Under active development. The public API is not stable yet: a 0.x minor
+bump may change it, and every such change is listed in
+[`CHANGELOG.md`](./CHANGELOG.md).
 
 ## License
 

@@ -24,13 +24,12 @@
 //!
 //! [`ChainedFixups<'a>`] borrows the binary's data slice (`'a`) and
 //! that lifetime threads through every iterator and view in this
-//! module. Chained fixups don't go through goblin, so there is no
-//! goblin-style `&self`-bound mismatch to work around. When
+//! module. Both bind encodings are decoded in-house, so a chained
+//! bind folded into the
+//! [`Import<'a>`](crate::import::Import) flow by
 //! [`MachoBinary::imports`](crate::binary::MachoBinary::imports)
-//! folds chained binds into the legacy
-//! [`Import<'p>`](crate::import::Import) flow, the reborrow from
-//! `&'a str` to `&'p str` is automatic since the binary owns the
-//! data slice for `'a` and any `&self` borrow lives `'p ⊆ 'a`.
+//! keeps the data lifetime with no reborrow in between: every name
+//! it carries points into the image's own bytes.
 //!
 //! ## Endianness
 //!
@@ -179,10 +178,9 @@ pub struct ChainedSegment {
     pub page_count: u16,
     /// Absolute byte offset (within the binary's data slice) of
     /// this segment's `dyld_chained_starts_in_segment` header.
-    /// Internal - drives the per-page chain walk added in
-    /// later PRs.
-    #[allow(dead_code)]
-    pub(crate) starts_offset: usize,
+    /// Internal: the per-page chain walk reads the page-start array
+    /// that follows it.
+    starts_offset: usize,
 }
 
 /// One row of the chained-fixup imports table.
@@ -664,7 +662,7 @@ pub struct RebaseIter<'a> {
 impl<'a> RebaseIter<'a> {
     /// Construct an empty iterator. Used when the binary has no
     /// chained fixups or every segment is unsupported.
-    pub(crate) fn empty() -> Self {
+    pub fn empty() -> Self {
         Self {
             inner: Vec::new().into_iter(),
             _phantom: core::marker::PhantomData,
@@ -686,7 +684,7 @@ pub struct BindIter<'a> {
 
 impl<'a> BindIter<'a> {
     /// Construct an empty iterator.
-    pub(crate) fn empty() -> Self {
+    pub fn empty() -> Self {
         Self {
             inner: Vec::new().into_iter(),
         }
@@ -707,10 +705,15 @@ impl<'a> Iterator for BindIter<'a> {
 /// Constructed by `MachoBinary::chained_*` accessors before the
 /// walk runs.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct SegmentLoc {
+pub struct SegmentLoc {
+    /// The segment's `dyld_chained_starts_in_segment` metadata.
     pub chained: ChainedSegment,
+    /// The segment's VM address, the base every fixup target is
+    /// resolved against.
     pub vmaddr: u64,
+    /// The segment's file offset.
     pub fileoff: u64,
+    /// The segment's file size: a slot past it has no on-disk bytes.
     pub filesize: u64,
 }
 
@@ -719,7 +722,7 @@ pub(crate) struct SegmentLoc {
 /// `image_base` is the lowest `vmaddr` of any segment with non-zero
 /// file size (typically `__TEXT.vmaddr`). Used to resolve `_OFFSET`
 /// formats whose `target` field is image-relative.
-pub(crate) fn build_rebase_iter<'a>(
+pub fn build_rebase_iter<'a>(
     data: &'a [u8],
     cf: &ChainedFixups<'a>,
     locs: &[SegmentLoc],
@@ -745,7 +748,7 @@ impl<'a> RebaseIter<'a> {
 }
 
 /// Construct a [`BindIter`] over every decoded chained bind.
-pub(crate) fn build_bind_iter<'a>(
+pub fn build_bind_iter<'a>(
     data: &'a [u8],
     _cf: &ChainedFixups<'a>,
     locs: &[SegmentLoc],
@@ -1091,20 +1094,28 @@ fn resolve_import<'a>(
             return ("", "", false, 0);
         }
     };
-    let dylib = resolve_lib_ordinal(import.lib_ordinal, dylib_names);
+    let dylib = resolve_lib_ordinal(i64::from(import.lib_ordinal), dylib_names);
     (import.name, dylib, import.weak_import, import.addend)
 }
 
-/// Map a chained-fixup `lib_ordinal` to a dylib name. Positive
-/// ordinals are 1-based indices into the binary's
-/// `LC_LOAD_*_DYLIB` list; zero and negative ordinals are special
-/// dyld values exposed verbatim.
-pub(crate) fn resolve_lib_ordinal<'a>(ordinal: i16, dylib_names: &[&'a str]) -> &'a str {
+/// Map a library ordinal to a dylib name. Positive ordinals are
+/// 1-based indices into the binary's `LC_LOAD_*_DYLIB` list (as
+/// [`dylib_ordinals`](crate::dylib::dylib_ordinals) keeps it, one
+/// entry per load command); zero and negative ordinals are special
+/// dyld values exposed verbatim. `""` when no load command holds the
+/// ordinal.
+///
+/// The one resolver for every encoding that names a library by
+/// ordinal: chained-fixup imports, legacy bind opcodes and export-trie
+/// re-exports.
+pub fn resolve_lib_ordinal<'a>(ordinal: i64, dylib_names: &[&'a str]) -> &'a str {
     match ordinal {
-        n if n > 0 => {
-            let idx = (n as usize).saturating_sub(1);
-            dylib_names.get(idx).copied().unwrap_or("")
-        }
+        n if n > 0 => usize::try_from(n)
+            .ok()
+            .and_then(|n| n.checked_sub(1))
+            .and_then(|idx| dylib_names.get(idx))
+            .copied()
+            .unwrap_or(""),
         0 => "self",
         -1 => "main-executable",
         -2 => "flat-namespace",
@@ -1160,6 +1171,32 @@ fn read_pool_string(data: &[u8], pool_base: usize, name_off: u32) -> Option<&str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every library ordinal dyld defines, through the one resolver
+    /// the three bind / export encodings share.
+    #[test]
+    fn library_ordinals_resolve_to_their_library_or_their_special_name() {
+        let table = ["/usr/lib/a.dylib", "/usr/lib/b.dylib"];
+        // Positive ordinals are 1-based into the load-command table.
+        assert_eq!(resolve_lib_ordinal(1, &table), "/usr/lib/a.dylib");
+        assert_eq!(resolve_lib_ordinal(2, &table), "/usr/lib/b.dylib");
+        // Past the table, and the saturated ordinal a ULEB too large
+        // for i64 produces: no library, not a panic or a wrong row.
+        assert_eq!(resolve_lib_ordinal(3, &table), "");
+        assert_eq!(resolve_lib_ordinal(i64::MAX, &table), "");
+        // The special ordinals are dyld lookup modes, not libraries.
+        assert_eq!(resolve_lib_ordinal(0, &table), "self");
+        assert_eq!(resolve_lib_ordinal(-1, &table), "main-executable");
+        assert_eq!(resolve_lib_ordinal(-2, &table), "flat-namespace");
+        assert_eq!(resolve_lib_ordinal(-3, &table), "weak");
+        // Anything else is a value dyld does not define.
+        assert_eq!(resolve_lib_ordinal(-4, &table), "");
+        assert_eq!(resolve_lib_ordinal(i64::MIN, &table), "");
+        // An image with no dependencies resolves every positive
+        // ordinal to nothing while keeping the special names.
+        assert_eq!(resolve_lib_ordinal(1, &[]), "");
+        assert_eq!(resolve_lib_ordinal(0, &[]), "self");
+    }
 
     #[test]
     fn pointer_format_round_trip() {

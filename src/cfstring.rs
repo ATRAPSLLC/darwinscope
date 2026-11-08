@@ -157,7 +157,7 @@ impl<'a> CFStringRuntime<'a> {
     /// Returns `None` when the image is 32-bit (the v0.1 walker is
     /// 64-bit only - the on-disk struct is 32 bytes wide and uses
     /// 64-bit pointers) or when no `__cfstring` section is present.
-    pub(crate) fn build(bin: &MachoBinary<'a>) -> Option<Self> {
+    pub fn build(bin: &MachoBinary<'a>) -> Option<Self> {
         if !bin.header().is_64() {
             #[cfg(feature = "tracing")]
             tracing::debug!(

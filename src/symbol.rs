@@ -149,7 +149,9 @@ pub struct SymbolIter<'a, 'p> {
 }
 
 impl<'a, 'p> SymbolIter<'a, 'p> {
-    pub(crate) fn new(inner: Option<GoblinSymbolIter<'a>>) -> Self {
+    /// The iterator over `inner`, the image's nlist symbol table,
+    /// empty when the image has none.
+    pub fn new(inner: Option<GoblinSymbolIter<'a>>) -> Self {
         Self {
             inner,
             _parent: PhantomData,

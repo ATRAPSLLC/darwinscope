@@ -105,12 +105,12 @@ pub enum TypeReference<'a> {
 /// structured decode of the trailing arrays is post-v0.1.
 #[derive(Debug)]
 pub struct Conformance<'a, 'p> {
-    pub(crate) rt: &'p SwiftRuntime<'a>,
-    pub(crate) address: u64,
-    pub(crate) protocol_descriptor_va: u64,
-    pub(crate) type_ref: TypeReference<'a>,
-    pub(crate) witness_table_va: u64,
-    pub(crate) flags: ConformanceFlags,
+    rt: &'p SwiftRuntime<'a>,
+    address: u64,
+    protocol_descriptor_va: u64,
+    type_ref: TypeReference<'a>,
+    witness_table_va: u64,
+    flags: ConformanceFlags,
 }
 
 impl<'a, 'p> Conformance<'a, 'p> {
@@ -153,7 +153,8 @@ pub struct ConformanceIter<'a, 'p> {
 }
 
 impl<'a, 'p> ConformanceIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p SwiftRuntime<'a>) -> Self {
+    /// The iterator over `__swift5_proto` of `rt`.
+    pub fn new(rt: &'p SwiftRuntime<'a>) -> Self {
         Self { rt, cursor: 0 }
     }
 }

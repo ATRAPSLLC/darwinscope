@@ -300,13 +300,21 @@ fn selector_refs_include_greet_and_speak() {
     let bytes = read(OBJC_TINY_ARM64);
     let bin = MachoBinary::parse(&bytes).unwrap();
     let rt = bin.objc().unwrap();
-    let sels: Vec<&str> = rt.selector_refs().collect();
+    let refs: Vec<_> = rt.selector_refs().collect();
+    let sels: Vec<&str> = refs.iter().map(|r| r.selector).collect();
     for needle in &["greet", "speak", "setName:", "darwinscope_reversed"] {
         assert!(
             sels.contains(needle),
             "selrefs must include {needle:?}; got {sels:?}"
         );
     }
+    // Each slot is its own pointer-sized cell of `__objc_selrefs`, in order.
+    let slots: Vec<u64> = refs.iter().map(|r| r.slot_address).collect();
+    assert!(
+        slots.iter().all(|&slot| slot != 0 && slot % 8 == 0),
+        "{slots:x?}"
+    );
+    assert!(slots.windows(2).all(|w| w[0] < w[1]), "{slots:x?}");
 }
 
 #[test]

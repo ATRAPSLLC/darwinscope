@@ -2,3 +2,9 @@
 /research
 /reference
 Cargo.lock
+# Repo-local working notes, deliberately not published or tracked (see
+# the 0.1.1 entry in CHANGELOG.md): the crate docs must not link to
+# them and `cargo package` must not ship them.
+/RESEARCH.md
+/SAMPLES.md
+/TODO.md

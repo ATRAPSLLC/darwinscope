@@ -54,8 +54,17 @@ pub enum RefTarget<'a> {
     },
 }
 
+/// One `__objc_selrefs` slot: where it sits and the selector it names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SelRef<'a> {
+    /// VM address of the slot.
+    pub slot_address: u64,
+    /// The selector C-string the slot resolves to.
+    pub selector: &'a str,
+}
+
 /// Iterator over `__objc_selrefs` - yields each referenced
-/// selector C-string in slot order.
+/// selector, with its slot, in slot order.
 pub struct SelRefIter<'a, 'p> {
     rt: &'p ObjcRuntime<'a>,
     cursor: usize,
@@ -63,7 +72,8 @@ pub struct SelRefIter<'a, 'p> {
 }
 
 impl<'a, 'p> SelRefIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p ObjcRuntime<'a>) -> Self {
+    /// The iterator over the `__objc_selrefs` slots of `rt`.
+    pub fn new(rt: &'p ObjcRuntime<'a>) -> Self {
         Self {
             rt,
             cursor: 0,
@@ -73,7 +83,7 @@ impl<'a, 'p> SelRefIter<'a, 'p> {
 }
 
 impl<'a, 'p> Iterator for SelRefIter<'a, 'p> {
-    type Item = &'a str;
+    type Item = SelRef<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let sec = self.rt.sel_refs?;
         loop {
@@ -86,8 +96,11 @@ impl<'a, 'p> Iterator for SelRefIter<'a, 'p> {
             if sel_va == 0 {
                 continue;
             }
-            if let Some(s) = self.rt.read_cstr(sel_va) {
-                return Some(s);
+            if let Some(selector) = self.rt.read_cstr(sel_va) {
+                return Some(SelRef {
+                    slot_address: slot_va,
+                    selector,
+                });
             }
         }
     }
@@ -154,7 +167,8 @@ pub struct ClassRefIter<'a, 'p> {
 }
 
 impl<'a, 'p> ClassRefIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p ObjcRuntime<'a>) -> Self {
+    /// The iterator over the `__objc_classrefs` slots of `rt`.
+    pub fn new(rt: &'p ObjcRuntime<'a>) -> Self {
         Self {
             rt,
             cursor: 0,
@@ -181,7 +195,8 @@ pub struct SuperRefIter<'a, 'p> {
 }
 
 impl<'a, 'p> SuperRefIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p ObjcRuntime<'a>) -> Self {
+    /// The iterator over the `__objc_superrefs` slots of `rt`.
+    pub fn new(rt: &'p ObjcRuntime<'a>) -> Self {
         Self {
             rt,
             cursor: 0,
@@ -208,7 +223,8 @@ pub struct ProtoRefIter<'a, 'p> {
 }
 
 impl<'a, 'p> ProtoRefIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p ObjcRuntime<'a>) -> Self {
+    /// The iterator over the `__objc_protorefs` slots of `rt`.
+    pub fn new(rt: &'p ObjcRuntime<'a>) -> Self {
         Self {
             rt,
             cursor: 0,

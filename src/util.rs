@@ -235,7 +235,7 @@ pub fn read_u64_be_at(data: &[u8], off: usize) -> Option<u64> {
 /// modules in this crate can call it without importing `binary`.
 ///
 /// [`MachoBinary::vm_to_file_offset`]: crate::binary::MachoBinary::vm_to_file_offset
-pub(crate) fn vm_to_file_offset_in(
+pub fn vm_to_file_offset_in(
     segments: impl IntoIterator<Item = (u64, u64, u64, u64)>,
     vmaddr: u64,
 ) -> Option<u64> {
@@ -269,7 +269,7 @@ pub(crate) fn vm_to_file_offset_in(
 ///
 /// * `segments` - `(vmaddr, vmsize, fileoff, filesize)` per segment.
 /// * `offset` - A file offset, counted from the image's `mach_header`.
-pub(crate) fn file_offset_to_vm_in(
+pub fn file_offset_to_vm_in(
     segments: impl IntoIterator<Item = (u64, u64, u64, u64)>,
     offset: u64,
 ) -> Option<u64> {

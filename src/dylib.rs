@@ -63,7 +63,9 @@ pub struct DylibIter<'a, 'p> {
 }
 
 impl<'a, 'p> DylibIter<'a, 'p> {
-    pub(crate) fn new(data: &'a [u8], lcs: &'p [GoblinLoadCommand]) -> Self {
+    /// The iterator over the dependency load commands of `lcs`,
+    /// reading install names out of `data`.
+    pub fn new(data: &'a [u8], lcs: &'p [GoblinLoadCommand]) -> Self {
         Self {
             data,
             inner: lcs.iter(),
@@ -75,14 +77,9 @@ impl<'a, 'p> Iterator for DylibIter<'a, 'p> {
     type Item = Dylib<'a, 'p>;
     fn next(&mut self) -> Option<Self::Item> {
         for lc in self.inner.by_ref() {
-            let (kind, c): (DylibKind, &DylibCommand) = match &lc.command {
-                CommandVariant::LoadDylib(c) => (DylibKind::Load, c),
-                CommandVariant::LoadWeakDylib(c) => (DylibKind::LoadWeak, c),
-                CommandVariant::ReexportDylib(c) => (DylibKind::Reexport, c),
-                CommandVariant::LoadUpwardDylib(c) => (DylibKind::LoadUpward, c),
-                CommandVariant::LazyLoadDylib(c) => (DylibKind::LazyLoad, c),
-                // Skip LC_ID_DYLIB and everything else.
-                _ => continue,
+            // Skip LC_ID_DYLIB and everything else.
+            let Some((kind, c)) = dylib_command(lc) else {
+                continue;
             };
             let Some(name) = resolve_dylib_name(self.data, lc, c) else {
                 // Malformed: name offset out of bounds. Fail-soft.
@@ -101,6 +98,38 @@ impl<'a, 'p> Iterator for DylibIter<'a, 'p> {
     }
 }
 
+/// The dependency a load command declares, with its kind: `None` for
+/// every command but the five `LC_*_DYLIB` dependency kinds (so also
+/// for `LC_ID_DYLIB`, the image's own install name).
+fn dylib_command(lc: &GoblinLoadCommand) -> Option<(DylibKind, &DylibCommand)> {
+    match &lc.command {
+        CommandVariant::LoadDylib(c) => Some((DylibKind::Load, c)),
+        CommandVariant::LoadWeakDylib(c) => Some((DylibKind::LoadWeak, c)),
+        CommandVariant::ReexportDylib(c) => Some((DylibKind::Reexport, c)),
+        CommandVariant::LoadUpwardDylib(c) => Some((DylibKind::LoadUpward, c)),
+        CommandVariant::LazyLoadDylib(c) => Some((DylibKind::LazyLoad, c)),
+        _ => None,
+    }
+}
+
+/// The image's dylib ordinal table: one install name per dependency
+/// load command, in load-command order, so entry `n - 1` is library
+/// ordinal `n` as dyld numbers it.
+///
+/// A command whose name cannot be read keeps its position as `""`:
+/// dyld numbers ordinals by load command, so dropping it would shift
+/// every later ordinal onto the wrong library. Resolve an ordinal
+/// through [`resolve_lib_ordinal`](crate::fixup::resolve_lib_ordinal).
+pub fn dylib_ordinals<'a>(data: &'a [u8], lcs: &[GoblinLoadCommand]) -> Vec<&'a str> {
+    lcs.iter()
+        .filter_map(|lc| {
+            let (_, c) = dylib_command(lc)?;
+            Some(resolve_dylib_name(data, lc, c).unwrap_or(""))
+        })
+        .collect()
+}
+
+/// Reads a dependency command's install name, bounded by the command.
 fn resolve_dylib_name<'a>(
     data: &'a [u8],
     lc: &GoblinLoadCommand,
@@ -142,7 +171,9 @@ pub struct LoadCommandIter<'a, 'p> {
 }
 
 impl<'a, 'p> LoadCommandIter<'a, 'p> {
-    pub(crate) fn new(data: &'a [u8], lcs: &'p [GoblinLoadCommand]) -> Self {
+    /// The iterator over every load command in `lcs`, reading any
+    /// string payload out of `data`.
+    pub fn new(data: &'a [u8], lcs: &'p [GoblinLoadCommand]) -> Self {
         Self {
             data,
             inner: lcs.iter(),
@@ -168,5 +199,100 @@ impl<'a, 'p> Iterator for LoadCommandIter<'a, 'p> {
             bytes,
             _parent: PhantomData,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use goblin::mach::load_command::{
+        Dylib as GoblinDylib, LC_ID_DYLIB, LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB,
+    };
+
+    use super::*;
+
+    /// A `LC_LOAD_DYLIB`-shaped command of kind `cmd` whose
+    /// `dylib.name` offset is `name_off`, placed at `offset` in the
+    /// image and `cmdsize` bytes long.
+    fn command(cmd: u32, offset: usize, cmdsize: u32, name_off: u32) -> GoblinLoadCommand {
+        GoblinLoadCommand {
+            offset,
+            command: CommandVariant::LoadDylib(DylibCommand {
+                cmd,
+                cmdsize,
+                dylib: GoblinDylib {
+                    name: name_off,
+                    timestamp: 0,
+                    current_version: 0,
+                    compatibility_version: 0,
+                },
+            }),
+        }
+    }
+
+    /// The same command shape under another `CommandVariant`, so the
+    /// kind-dispatch of `dylib_command` is what decides.
+    fn variant(v: CommandVariant) -> GoblinLoadCommand {
+        GoblinLoadCommand {
+            offset: 0,
+            command: v,
+        }
+    }
+
+    /// `data` holding `/a.dylib` at 24 and `/b.dylib` at 56, the two
+    /// commands starting at 0 and 32 with a 24-byte header.
+    fn image() -> Vec<u8> {
+        let mut data = vec![0u8; 32];
+        data[24..].copy_from_slice(b"/a.dylib");
+        data.resize(56, 0);
+        data.extend_from_slice(b"/b.dylib\0");
+        data.resize(96, 0);
+        data
+    }
+
+    #[test]
+    fn the_table_holds_one_entry_per_dependency_command_in_order() {
+        let data = image();
+        let lcs = [
+            command(LC_LOAD_DYLIB, 0, 32, 24),
+            command(LC_LOAD_WEAK_DYLIB, 32, 32, 24),
+        ];
+        assert_eq!(dylib_ordinals(&data, &lcs), ["/a.dylib", "/b.dylib"]);
+    }
+
+    #[test]
+    fn a_command_whose_name_is_unreadable_keeps_its_ordinal_slot() {
+        // The first command's name offset runs past its own cmdsize,
+        // so the name cannot be read. Dropping the row would make
+        // ordinal 1 resolve to the second library.
+        let data = image();
+        let lcs = [
+            command(LC_LOAD_DYLIB, 0, 8, 24),
+            command(LC_LOAD_WEAK_DYLIB, 32, 32, 24),
+        ];
+        let table = dylib_ordinals(&data, &lcs);
+        assert_eq!(table, ["", "/b.dylib"]);
+        // Ordinals are 1-based into this table.
+        assert_eq!(crate::fixup::resolve_lib_ordinal(2, &table), "/b.dylib");
+    }
+
+    #[test]
+    fn a_command_that_is_not_a_dependency_takes_no_ordinal() {
+        // LC_ID_DYLIB is the image's own install name, not a
+        // dependency: dyld does not number it.
+        let data = image();
+        let lcs = [
+            variant(CommandVariant::IdDylib(DylibCommand {
+                cmd: LC_ID_DYLIB,
+                cmdsize: 32,
+                dylib: GoblinDylib {
+                    name: 24,
+                    timestamp: 0,
+                    current_version: 0,
+                    compatibility_version: 0,
+                },
+            })),
+            command(LC_LOAD_DYLIB, 32, 32, 24),
+        ];
+        assert_eq!(dylib_ordinals(&data, &lcs), ["/b.dylib"]);
     }
 }

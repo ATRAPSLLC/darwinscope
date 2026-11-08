@@ -97,7 +97,9 @@ struct PropertyListLayout {
 }
 
 impl<'a, 'p> PropertyIter<'a, 'p> {
-    pub(crate) fn empty(rt: &'p ObjcRuntime<'a>) -> Self {
+    /// The iterator that yields no property, for a class or protocol
+    /// of `rt` whose property list is absent.
+    pub fn empty(rt: &'p ObjcRuntime<'a>) -> Self {
         Self {
             rt,
             layout: None,
@@ -131,10 +133,9 @@ impl<'a, 'p> Iterator for PropertyIter<'a, 'p> {
     }
 }
 
-pub(crate) fn property_list_iter<'a, 'p>(
-    rt: &'p ObjcRuntime<'a>,
-    list_va: u64,
-) -> PropertyIter<'a, 'p> {
+/// The iterator over the `property_list_t` at `list_va` in `rt`,
+/// empty when the address is null or unreadable.
+pub fn property_list_iter<'a, 'p>(rt: &'p ObjcRuntime<'a>, list_va: u64) -> PropertyIter<'a, 'p> {
     if list_va == 0 || (list_va & 0x1) != 0 {
         return PropertyIter::empty(rt);
     }

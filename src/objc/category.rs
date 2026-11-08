@@ -159,7 +159,9 @@ pub struct CategoryIter<'a, 'p> {
 }
 
 impl<'a, 'p> CategoryIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p ObjcRuntime<'a>) -> Self {
+    /// The iterator over `__objc_catlist` / `__objc_nlcatlist` of
+    /// `rt`, each category once.
+    pub fn new(rt: &'p ObjcRuntime<'a>) -> Self {
         let mut seen: HashSet<u64> = HashSet::new();
         let mut ordered: Vec<u64> = Vec::new();
         for sec in [rt.cat_list, rt.nlcat_list].iter().flatten() {

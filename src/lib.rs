@@ -8,8 +8,10 @@
 //!
 //! - The Mach-O container itself: header, load commands, segments,
 //!   sections, nlist symbol table, bind / export tries, fat-binary
-//!   slices, dylib graph, `LC_FUNCTION_STARTS`, and the data ranges
-//!   `LC_DATA_IN_CODE` declares inside code sections.
+//!   slices, dylib graph, `LC_FUNCTION_STARTS`, the data ranges
+//!   `LC_DATA_IN_CODE` declares inside code sections, and the
+//!   compact unwind table with the LSDA of every function that
+//!   handles exceptions.
 //! - The embedded **code-signature SuperBlob**: CodeDirectory
 //!   identifier and Team ID, signing flags, CodeDirectory hash type,
 //!   embedded CMS signature size, entitlements XML plist (key /
@@ -95,8 +97,9 @@
 //!
 //! ## Status
 //!
-//! v0.1 is under active development. The public API will remain
-//! unstable until v0.1 ships.
+//! Under active development. The public API is not stable yet: a 0.x
+//! minor bump may change it, and every such change is listed in the
+//! crate's `CHANGELOG.md`.
 
 // The `missing_docs`, `unsafe_code`, `clippy::unwrap_used`,
 // `clippy::expect_used`, `clippy::panic`,
@@ -152,21 +155,22 @@ pub use objc::{
     ClassIter, ClassRefIter, ConformanceEdge, ConformanceIter, ImageInfo, Ivar, IvarIter, Method,
     MethodIter, MethodKind, ObjcCategory, ObjcClass, ObjcProtocol, ObjcRuntime, ParsedAttribute,
     ParsedAttributes, Property, PropertyIter, ProtoRefIter, ProtocolIter, ProtocolNameIter,
-    RefTarget, SelRefIter, SuperRefIter,
+    RefTarget, SelRef, SelRefIter, SuperRefIter,
 };
 
 // Swift 5 type-metadata re-exports. Visible at the crate root for
 // ergonomic consumers; the full surface lives in [`crate::swift`].
 pub use swift::{
-    CaptureDescriptor, CaptureIter, Conformance, ConformanceFlags,
+    CaptureDescriptor, CaptureIter, ClassBody, Conformance, ConformanceFlags,
     ConformanceIter as SwiftConformanceIter, ContextDescriptorFlags, ContextDescriptorKind,
     DefaultOverrideEntry, DefaultOverrideEntryIter, DefaultOverrideTableHeader,
-    DynamicReplacementScope, FieldDescriptor, FieldDescriptorKind, FieldIter, FieldRecord,
-    FieldRecordFlags, FieldRecordIter, ForeignMetadataInit, GenericContextHeader,
+    DynamicReplacementScope, EnumBody, FieldDescriptor, FieldDescriptorKind, FieldIter,
+    FieldRecord, FieldRecordFlags, FieldRecordIter, ForeignMetadataInit, GenericContextHeader,
     InvertibleProtocolSet, MetadataInitializationKind, MethodDescriptorFlags,
     ObjcResilientClassStubInfo, OverrideEntry, OverrideEntryIter, OverrideTableHeader, ParentChain,
     ParentContext, PrespecializationIter, ProtocolIter as SwiftProtocolIter, ReplacementIter,
-    ResilientSuperclass, SingletonMetadataInit, SingletonMetadataPointer, SwiftMethodKind,
-    SwiftProtocol, SwiftRuntime, TypeContextDescriptorFlags, TypeDescriptor, TypeIter,
-    TypeKindBody, TypeReference, TypeReferenceKind, VTableEntry, VTableHeader, VTableIter,
+    ResilientSuperclass, SingletonMetadataInit, SingletonMetadataPointer, StructBody,
+    SwiftMethodKind, SwiftProtocol, SwiftRuntime, TypeContextDescriptorFlags, TypeDescriptor,
+    TypeIter, TypeKindBody, TypeReference, TypeReferenceKind, VTableEntry, VTableHeader,
+    VTableIter,
 };

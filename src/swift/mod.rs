@@ -66,11 +66,9 @@
 //! [`FieldDescriptorKind::Other`] / [`SwiftMethodKind::Other`]
 //! rather than dropping the row.
 
-use std::collections::HashMap;
-
 use crate::{
     binary::MachoBinary,
-    util::{read_cstr_at, read_u32_le_at, read_u64_le_at, vm_to_file_offset_in},
+    util::{read_cstr_at, vm_to_file_offset_in},
 };
 
 mod capture;
@@ -90,6 +88,7 @@ pub use capture::{CaptureDescriptor, CaptureIter};
 pub use classtrailers::{
     ForeignMetadataInit, GenericContextHeader, InvertibleProtocolSet, ObjcResilientClassStubInfo,
     PrespecializationIter, ResilientSuperclass, SingletonMetadataInit, SingletonMetadataPointer,
+    decode_class_trailers, decode_value_type_trailers,
 };
 pub use conformance::{Conformance, ConformanceIter, TypeReference};
 pub use context::{
@@ -100,17 +99,18 @@ pub use context::{
 pub use field::{FieldDescriptor, FieldIter, FieldRecord, FieldRecordIter};
 pub use parent::{ParentChain, ParentContext};
 pub use protocol::{ProtocolIter, SwiftProtocol};
+pub use reflstr::lookup_field_name;
 pub use replacement::{DynamicReplacementScope, ReplacementIter};
 pub use typedescriptor::{
-    DefaultOverrideTableHeader, OverrideTableHeader, TypeDescriptor, TypeIter, TypeKindBody,
-    VTableHeader,
+    ClassBody, DefaultOverrideTableHeader, EnumBody, OverrideTableHeader, StructBody,
+    TypeDescriptor, TypeIter, TypeKindBody, VTableHeader,
 };
 pub use vtable::{
     DefaultOverrideEntry, DefaultOverrideEntryIter, OverrideEntry, OverrideEntryIter, VTableEntry,
     VTableIter,
 };
 
-pub(crate) use section::{SwiftSection, find_swift_section};
+pub use section::{SwiftSection, find_swift_section};
 
 /// Aggregate view over the Swift 5 runtime metadata embedded in a
 /// Mach-O image.
@@ -131,48 +131,35 @@ pub(crate) use section::{SwiftSection, find_swift_section};
 /// §"Section-name catalogue" (line 2369).
 #[derive(Debug)]
 pub struct SwiftRuntime<'a> {
-    pub(crate) data: &'a [u8],
+    data: &'a [u8],
     /// Cached `(vmaddr, vmsize, fileoff, filesize)` tuples for every
     /// segment with non-zero file backing - the input to
     /// [`vm_to_file_offset_in`]. Kept by value so the runtime
     /// outlives the originating [`MachoBinary`] borrow.
-    pub(crate) segments: Vec<(u64, u64, u64, u64)>,
+    segments: Vec<(u64, u64, u64, u64)>,
 
-    pub(crate) types: Option<SwiftSection<'a>>,
-    pub(crate) protos: Option<SwiftSection<'a>>,
-    pub(crate) proto: Option<SwiftSection<'a>>,
-    pub(crate) fieldmd: Option<SwiftSection<'a>>,
-    pub(crate) replac: Option<SwiftSection<'a>>,
-    pub(crate) replac2: Option<SwiftSection<'a>>,
-    pub(crate) capture: Option<SwiftSection<'a>>,
+    types: Option<SwiftSection<'a>>,
+    protos: Option<SwiftSection<'a>>,
+    proto: Option<SwiftSection<'a>>,
+    fieldmd: Option<SwiftSection<'a>>,
+    replac: Option<SwiftSection<'a>>,
+    replac2: Option<SwiftSection<'a>>,
+    capture: Option<SwiftSection<'a>>,
     /// `__swift5_reflstr` - pool of NUL-terminated UTF-8 reflection
     /// strings. Field-name resolution falls back here when the
     /// primary segment-table lookup fails (forward-compat for
     /// linker variants that emit reflstr outside the standard
     /// `__TEXT` placement).
-    pub(crate) reflstr: Option<SwiftSection<'a>>,
-    /// `__swift5_typeref` - mangled-name pool. Reserved for
-    /// future use; presence is surfaced via the section-discovery
-    /// path.
-    #[allow(dead_code)]
-    pub(crate) typeref: Option<SwiftSection<'a>>,
-    pub(crate) builtin: Option<SwiftSection<'a>>,
-    pub(crate) entry: Option<SwiftSection<'a>>,
-    pub(crate) mpenum: Option<SwiftSection<'a>>,
-    pub(crate) acfuncs: Option<SwiftSection<'a>>,
-    pub(crate) assocty: Option<SwiftSection<'a>>,
-
-    /// `vm_address → (symbol_name, dylib)` for every chained-fixup
-    /// bind in the image. Reserved for future conformance-walker
-    /// extensions that resolve external Obj-C class references.
-    #[allow(dead_code)]
-    pub(crate) binds_by_va: HashMap<u64, (&'a str, &'a str)>,
-    /// `vm_address → canonical target VA` for every chained-fixup
-    /// rebase. Used by [`Self::resolve_absolute_pointer`] for the
-    /// rare absolute slots (dynamic-replacement caches, indirect
-    /// type references).
-    #[allow(dead_code)]
-    pub(crate) rebases_by_va: HashMap<u64, u64>,
+    reflstr: Option<SwiftSection<'a>>,
+    /// `__swift5_typeref` - mangled-name pool. Presence-only,
+    /// reported by [`Self::has_mangled_name_pool`]; the descriptors'
+    /// own relative name pointers are resolved without it.
+    typeref: Option<SwiftSection<'a>>,
+    builtin: Option<SwiftSection<'a>>,
+    entry: Option<SwiftSection<'a>>,
+    mpenum: Option<SwiftSection<'a>>,
+    acfuncs: Option<SwiftSection<'a>>,
+    assocty: Option<SwiftSection<'a>>,
 }
 
 impl<'a> SwiftRuntime<'a> {
@@ -188,7 +175,7 @@ impl<'a> SwiftRuntime<'a> {
     ///   `__swift5_types`, `__swift5_protos`, `__swift5_proto`, or
     ///   `__swift5_fieldmd` is present. Reflection-stripped images
     ///   that ship only conformances still produce `Some(_)`.
-    pub(crate) fn build(bin: &MachoBinary<'a>) -> Option<Self> {
+    pub fn build(bin: &MachoBinary<'a>) -> Option<Self> {
         if !bin.header().is_64() {
             #[cfg(feature = "tracing")]
             tracing::debug!("darwinscope::swift: 32-bit Mach-O - Swift walker is 64-bit only");
@@ -215,30 +202,8 @@ impl<'a> SwiftRuntime<'a> {
             segments.push((s.vmaddr(), s.vmsize(), s.fileoff(), s.filesize()));
         }
 
-        // Index every bind site by slot VA. Foreign-class type
-        // references in conformances resolve through this map.
-        // Re-borrow into the data lifetime - names live in
-        // `__LINKEDIT` / `LC_SYMTAB.stroff`, both of which are
-        // addressable through `bin.raw()`.
-        let mut binds_by_va: HashMap<u64, (&'a str, &'a str)> = HashMap::new();
-        let data = bin.raw();
-        for imp in bin.imports() {
-            let Some(name) = reborrow_into_data(data, imp.name) else {
-                continue;
-            };
-            let Some(dylib) = reborrow_into_data(data, imp.dylib) else {
-                continue;
-            };
-            binds_by_va.insert(imp.address, (name, dylib));
-        }
-
-        let mut rebases_by_va: HashMap<u64, u64> = HashMap::new();
-        for r in bin.chained_rebases() {
-            rebases_by_va.insert(r.vm_address(), r.target_vmaddr());
-        }
-
         Some(Self {
-            data,
+            data: bin.raw(),
             segments,
             types,
             protos,
@@ -254,8 +219,6 @@ impl<'a> SwiftRuntime<'a> {
             mpenum: find_swift_section(bin, "__swift5_mpenum"),
             acfuncs: find_swift_section(bin, "__swift5_acfuncs"),
             assocty: find_swift_section(bin, "__swift5_assocty"),
-            binds_by_va,
-            rebases_by_va,
         })
     }
 
@@ -302,6 +265,13 @@ impl<'a> SwiftRuntime<'a> {
         self.entry.is_some()
     }
 
+    /// `true` when the image carries an `__swift5_typeref` section
+    /// (the mangled-name pool the descriptors' relative name
+    /// pointers reach into). Presence-only.
+    pub fn has_mangled_name_pool(&self) -> bool {
+        self.typeref.is_some()
+    }
+
     /// `true` when the image carries an `__swift5_builtin` section.
     /// Presence-only - the structured walker is post-v0.1.
     pub fn has_builtin_descriptors(&self) -> bool {
@@ -335,14 +305,14 @@ impl<'a> SwiftRuntime<'a> {
 
     /// Translate a virtual-memory address to its on-disk file
     /// offset using the cached segment table.
-    pub(crate) fn vm_to_file_offset(&self, vmaddr: u64) -> Option<u64> {
+    fn vm_to_file_offset(&self, vmaddr: u64) -> Option<u64> {
         vm_to_file_offset_in(self.segments.iter().copied(), vmaddr)
     }
 
     /// Read the C-string at virtual address `vmaddr`. Returns `None`
     /// when the address fails to resolve through the segment table
     /// or when the bytes are not valid UTF-8.
-    pub(crate) fn read_cstr(&self, vmaddr: u64) -> Option<&'a str> {
+    fn read_cstr(&self, vmaddr: u64) -> Option<&'a str> {
         if vmaddr == 0 {
             return None;
         }
@@ -350,77 +320,11 @@ impl<'a> SwiftRuntime<'a> {
         read_cstr_at(self.data, off)
     }
 
-    /// Read a little-endian `u32` at virtual address `vmaddr`.
-    #[allow(dead_code)]
-    pub(crate) fn read_u32(&self, vmaddr: u64) -> Option<u32> {
-        let off = self.vm_to_file_offset(vmaddr)? as usize;
-        read_u32_le_at(self.data, off)
-    }
-
-    /// Read a little-endian `u64` at virtual address `vmaddr`. The
-    /// result is **not** PAC-stripped. Used by
-    /// [`Self::resolve_absolute_pointer`] for rare absolute slot
-    /// reads.
-    #[allow(dead_code)]
-    pub(crate) fn read_u64(&self, vmaddr: u64) -> Option<u64> {
-        let off = self.vm_to_file_offset(vmaddr)? as usize;
-        read_u64_le_at(self.data, off)
-    }
-
     /// Translate a VA into a file offset and return a slice of `len`
     /// bytes from that offset, or `None` on out-of-bounds.
-    pub(crate) fn read_bytes(&self, vmaddr: u64, len: usize) -> Option<&'a [u8]> {
+    fn read_bytes(&self, vmaddr: u64, len: usize) -> Option<&'a [u8]> {
         let off = self.vm_to_file_offset(vmaddr)? as usize;
         let end = off.checked_add(len)?;
         self.data.get(off..end)
     }
-
-    /// Resolve an *absolute* pointer slot at virtual address
-    /// `slot_va` to its canonical target VA.
-    ///
-    /// Most Swift descriptor pointers are i32-relative and don't
-    /// reach this function - they're resolved via
-    /// [`crate::util::relative_pointer`]. Absolute slots (the rare
-    /// dynamic-replacement caches and `IndirectTypeDescriptor` /
-    /// `IndirectObjCClass` slots) go through the chained-fixup
-    /// rebase map first, then fall back to a PAC-stripped raw read.
-    ///
-    /// Returns `None` if the slot can't be read.
-    #[allow(dead_code)]
-    pub(crate) fn resolve_absolute_pointer(&self, slot_va: u64) -> Option<u64> {
-        if let Some(&target) = self.rebases_by_va.get(&slot_va) {
-            return Some(target);
-        }
-        let raw = self.read_u64(slot_va)?;
-        Some(crate::ptrauth::strip_signature(raw))
-    }
-}
-
-/// Re-borrow a `&str` slice that aliases somewhere inside `data`,
-/// returning a `&'a str` whose lifetime is the data lifetime.
-///
-/// The workaround for the lifetime-collapse documented in
-/// [`crate::import`]: `goblin::mach::MachO::imports` ties its name
-/// strings to the `&self` borrow rather than to the data lifetime,
-/// even though the bytes themselves live in `__LINKEDIT` /
-/// `LC_SYMTAB.stroff` and are addressable through `bin.raw()`. We
-/// locate the slice's pointer range inside `data`, reborrow at that
-/// range, and confirm the bytes still parse as valid UTF-8.
-fn reborrow_into_data<'a>(data: &'a [u8], borrowed: &str) -> Option<&'a str> {
-    if borrowed.is_empty() {
-        // Empty strings can't be located inside `data` (no anchor
-        // pointer); the caller treats them as "no name" anyway.
-        return Some("");
-    }
-    let data_start = data.as_ptr() as usize;
-    let data_end = data_start.checked_add(data.len())?;
-    let s_start = borrowed.as_ptr() as usize;
-    let s_end = s_start.checked_add(borrowed.len())?;
-    if s_start < data_start || s_end > data_end {
-        return None;
-    }
-    let off = s_start.checked_sub(data_start)?;
-    let end = off.checked_add(borrowed.len())?;
-    let slice = data.get(off..end)?;
-    core::str::from_utf8(slice).ok()
 }

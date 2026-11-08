@@ -51,7 +51,7 @@ use crate::{
 };
 
 /// On-disk size of a `class_t` struct.
-pub(crate) const CLASS_T_SIZE: usize = 40;
+const CLASS_T_SIZE: usize = 40;
 
 /// Offset of the `bits` word inside `class_t`.
 const CLASS_T_BITS_OFFSET: usize = 32;
@@ -129,12 +129,12 @@ bitflags! {
 /// `true`).
 #[derive(Clone)]
 pub struct ObjcClass<'a, 'p> {
-    pub(crate) rt: &'p ObjcRuntime<'a>,
-    pub(crate) address: u64,
-    pub(crate) isa: u64,
-    pub(crate) superclass: u64,
-    pub(crate) bits: u64,
-    pub(crate) is_meta: bool,
+    rt: &'p ObjcRuntime<'a>,
+    address: u64,
+    isa: u64,
+    superclass: u64,
+    bits: u64,
+    is_meta: bool,
 }
 
 impl<'a, 'p> ObjcClass<'a, 'p> {
@@ -441,7 +441,9 @@ pub struct ClassIter<'a, 'p> {
 }
 
 impl<'a, 'p> ClassIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p ObjcRuntime<'a>) -> Self {
+    /// The iterator over `__objc_classlist` / `__objc_nlclslist` of
+    /// `rt`, each class once, instance class then metaclass.
+    pub fn new(rt: &'p ObjcRuntime<'a>) -> Self {
         // De-dup by class_t VA. Lazy list first; non-lazy is a
         // strict subset on conforming compilers.
         let mut seen: std::collections::HashSet<u64> = std::collections::HashSet::new();
@@ -502,7 +504,7 @@ impl<'a, 'p> Iterator for ClassIter<'a, 'p> {
     }
 }
 
-pub(crate) fn decode_class<'a, 'p>(
+fn decode_class<'a, 'p>(
     rt: &'p ObjcRuntime<'a>,
     class_va: u64,
     is_meta: bool,
@@ -557,7 +559,7 @@ pub(crate) fn decode_class<'a, 'p>(
 /// Walks the class's `bits → class_ro_t.name` indirection. Returns
 /// `None` when `class_va` doesn't decode as a valid `class_t` or
 /// when the name pointer fails to resolve.
-pub(crate) fn decode_class_name<'a>(rt: &ObjcRuntime<'a>, class_va: u64) -> Option<&'a str> {
+pub fn decode_class_name<'a>(rt: &ObjcRuntime<'a>, class_va: u64) -> Option<&'a str> {
     rt.read_bytes(class_va, CLASS_T_SIZE)?;
     let bits_slot_va = class_va.checked_add(CLASS_T_BITS_OFFSET as u64)?;
     let class_ro_va = if let Some(&target) = rt.rebases_by_va.get(&bits_slot_va) {

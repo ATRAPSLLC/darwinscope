@@ -158,7 +158,7 @@ struct MethodListLayout {
 }
 
 impl<'a, 'p> MethodIter<'a, 'p> {
-    pub(crate) fn empty(rt: &'p ObjcRuntime<'a>) -> Self {
+    fn empty(rt: &'p ObjcRuntime<'a>) -> Self {
         Self {
             rt,
             layout: None,
@@ -204,10 +204,7 @@ impl<'a, 'p> Iterator for MethodIter<'a, 'p> {
 ///   runtime-allocated, never on disk).
 /// - The header at `list_va` cannot be read.
 /// - `entsize` is `0` or smaller than the format demands.
-pub(crate) fn method_list_iter<'a, 'p>(
-    rt: &'p ObjcRuntime<'a>,
-    list_va: u64,
-) -> MethodIter<'a, 'p> {
+pub fn method_list_iter<'a, 'p>(rt: &'p ObjcRuntime<'a>, list_va: u64) -> MethodIter<'a, 'p> {
     if list_va == 0 || (list_va & 0x1) != 0 {
         if (list_va & 0x1) != 0 {
             #[cfg(feature = "tracing")]

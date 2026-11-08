@@ -710,10 +710,10 @@ fn write_objc_runtime<W: Write>(rt: &ObjcRuntime<'_>, w: &mut W) -> io::Result<(
         )?;
     }
 
-    let selrefs: Vec<&str> = rt.selector_refs().collect();
+    let selrefs: Vec<_> = rt.selector_refs().collect();
     writeln!(w, "selector_ref_count {}", selrefs.len())?;
     for (i, s) in selrefs.iter().enumerate() {
-        writeln!(w, "selector_ref[{i}] {s}")?;
+        writeln!(w, "selector_ref[{i}] {:#x} {}", s.slot_address, s.selector)?;
     }
 
     let class_refs: Vec<_> = rt.class_refs().collect();

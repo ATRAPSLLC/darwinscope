@@ -1,6 +1,6 @@
 [package]
 name = "darwinscope"
-version = "0.1.4"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.88"
 description = "Parse and inspect Mach-O binaries - including the Apple Objective-C and Swift runtime metadata they embed"
@@ -19,6 +19,7 @@ exclude = ["tests/samples/", "reference/", "research/"]
 [lints.rust]
 missing_docs = "deny"
 unsafe_code = "deny"
+unreachable_pub = "deny"
 
 [lints.clippy]
 unwrap_used = "deny"
@@ -36,10 +37,10 @@ tracing = ["dep:tracing"]
 [dependencies]
 goblin = "0.10.7"
 bitflags = "2.13.2"
-plist = "1.10.1"
+plist = "1.10.3"
 blake3 = "1.8.7"
-sha2 = "0.11.0"
+sha2 = "0.11.1"
 tracing = { version = "0.1.44", optional = true, default-features = false, features = ["std"] }
 
 [dev-dependencies]
-proptest = "1.11.0"
+proptest = "1.12.0"

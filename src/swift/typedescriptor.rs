@@ -48,7 +48,7 @@
 use crate::{
     swift::{
         SwiftRuntime, classtrailers,
-        context::{ContextDescriptorFlags, ContextDescriptorKind, MetadataInitializationKind},
+        context::{ContextDescriptorFlags, ContextDescriptorKind},
     },
     util::{read_i32_le_at, read_u32_le_at, relative_pointer},
 };
@@ -79,12 +79,12 @@ const TYPE_DESCRIPTOR_BASE_SIZE: u64 = 20;
 /// pass and surfaced through the kind body.
 #[derive(Debug)]
 pub struct TypeDescriptor<'a, 'p> {
-    pub(crate) rt: &'p SwiftRuntime<'a>,
-    pub(crate) address: u64,
-    pub(crate) flags: ContextDescriptorFlags,
-    pub(crate) parent_va: u64,
-    pub(crate) name: &'a str,
-    pub(crate) body: TypeKindBody<'a>,
+    rt: &'p SwiftRuntime<'a>,
+    address: u64,
+    flags: ContextDescriptorFlags,
+    parent_va: u64,
+    name: &'a str,
+    body: TypeKindBody<'a>,
 }
 
 /// Per-kind tail body of a [`TypeDescriptor`].
@@ -161,10 +161,10 @@ pub struct ClassBody<'a> {
     /// trailing block when present.
     pub resilient_superclass_va: Option<u64>,
     /// Resolved VA of the [`classtrailers::ForeignMetadataInit`]
-    /// block when [`MetadataInitializationKind::Foreign`].
+    /// block when [`crate::swift::MetadataInitializationKind::Foreign`].
     pub foreign_metadata_init_va: Option<u64>,
     /// Resolved VA of the [`classtrailers::SingletonMetadataInit`]
-    /// block when [`MetadataInitializationKind::Singleton`].
+    /// block when [`crate::swift::MetadataInitializationKind::Singleton`].
     pub singleton_metadata_init_va: Option<u64>,
     /// Decoded vtable header when `Class_HasVTable` is set.
     pub vtable_header: Option<VTableHeader>,
@@ -326,12 +326,11 @@ impl<'a, 'p> TypeDescriptor<'a, 'p> {
             _ => return None,
         };
         let header = class.vtable_header.as_ref()?;
-        Some(crate::swift::VTableIter {
-            rt: self.rt,
-            base_va: header.entries_va,
-            count: header.vtable_size,
-            cursor: 0,
-        })
+        Some(crate::swift::VTableIter::new(
+            self.rt,
+            header.entries_va,
+            header.vtable_size,
+        ))
     }
 
     /// Iterator over the class override table, if present.
@@ -341,12 +340,11 @@ impl<'a, 'p> TypeDescriptor<'a, 'p> {
             _ => return None,
         };
         let header = class.override_table_header.as_ref()?;
-        Some(crate::swift::OverrideEntryIter {
-            rt: self.rt,
-            base_va: header.entries_va,
-            count: header.num_entries,
-            cursor: 0,
-        })
+        Some(crate::swift::OverrideEntryIter::new(
+            self.rt,
+            header.entries_va,
+            header.num_entries,
+        ))
     }
 
     /// Iterator over the class default-override table, if present.
@@ -356,12 +354,11 @@ impl<'a, 'p> TypeDescriptor<'a, 'p> {
             _ => return None,
         };
         let header = class.default_override_table_header.as_ref()?;
-        Some(crate::swift::DefaultOverrideEntryIter {
-            rt: self.rt,
-            base_va: header.entries_va,
-            count: header.num_entries,
-            cursor: 0,
-        })
+        Some(crate::swift::DefaultOverrideEntryIter::new(
+            self.rt,
+            header.entries_va,
+            header.num_entries,
+        ))
     }
 
     /// Resolved [`crate::swift::ResilientSuperclass`] block when present.
@@ -447,12 +444,9 @@ impl<'a, 'p> TypeDescriptor<'a, 'p> {
             TypeKindBody::Enum(e) => (e.prespecializations_count?, e.prespecializations_base_va?),
             TypeKindBody::NonType => return None,
         };
-        Some(crate::swift::PrespecializationIter {
-            rt: self.rt,
-            base_va,
-            count,
-            cursor: 0,
-        })
+        Some(crate::swift::PrespecializationIter::new(
+            self.rt, base_va, count,
+        ))
     }
 
     /// Decoded `InvertibleProtocolSet` payload when present.
@@ -585,7 +579,8 @@ pub struct TypeIter<'a, 'p> {
 }
 
 impl<'a, 'p> TypeIter<'a, 'p> {
-    pub(crate) fn new(rt: &'p SwiftRuntime<'a>) -> Self {
+    /// The iterator over `__swift5_types` of `rt`.
+    pub fn new(rt: &'p SwiftRuntime<'a>) -> Self {
         Self { rt, cursor: 0 }
     }
 }
@@ -635,7 +630,7 @@ impl<'a, 'p> Iterator for TypeIter<'a, 'p> {
 /// load-bearing relative pointer (the mangled `Name`) fails to
 /// resolve. Per-kind tail decode failures fall back to
 /// [`TypeKindBody::NonType`].
-pub(crate) fn decode_type_descriptor<'a, 'p>(
+fn decode_type_descriptor<'a, 'p>(
     rt: &'p SwiftRuntime<'a>,
     descriptor_va: u64,
 ) -> Option<TypeDescriptor<'a, 'p>> {
@@ -853,11 +848,4 @@ fn decode_enum_body(
     );
 
     Some(body)
-}
-
-/// Decoded `MetadataInitializationKind` for the trailing-objects
-/// walker.
-#[allow(dead_code)]
-pub(crate) fn metadata_init_kind(flags: ContextDescriptorFlags) -> MetadataInitializationKind {
-    flags.type_flags().metadata_initialization()
 }

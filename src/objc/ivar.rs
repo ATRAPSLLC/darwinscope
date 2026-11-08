@@ -99,7 +99,7 @@ struct IvarListLayout {
 }
 
 impl<'a, 'p> IvarIter<'a, 'p> {
-    pub(crate) fn empty(rt: &'p ObjcRuntime<'a>) -> Self {
+    fn empty(rt: &'p ObjcRuntime<'a>) -> Self {
         Self {
             rt,
             layout: None,
@@ -133,7 +133,9 @@ impl<'a, 'p> Iterator for IvarIter<'a, 'p> {
     }
 }
 
-pub(crate) fn ivar_list_iter<'a, 'p>(rt: &'p ObjcRuntime<'a>, list_va: u64) -> IvarIter<'a, 'p> {
+/// The iterator over the `ivar_list_t` at `list_va` in `rt`, empty
+/// when the address is null or unreadable.
+pub fn ivar_list_iter<'a, 'p>(rt: &'p ObjcRuntime<'a>, list_va: u64) -> IvarIter<'a, 'p> {
     if list_va == 0 {
         return IvarIter::empty(rt);
     }

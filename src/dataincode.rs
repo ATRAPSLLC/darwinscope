@@ -110,11 +110,7 @@ impl<'a, 'p> DataInCodeIter<'a, 'p> {
     /// * `stream` - The `dataoff..dataoff + datasize` slice of the image.
     /// * `little_endian` - The image's byte order, which the entries share.
     /// * `segments` - `(vmaddr, vmsize, fileoff, filesize)` per segment.
-    pub(crate) fn new(
-        stream: &'a [u8],
-        little_endian: bool,
-        segments: Vec<(u64, u64, u64, u64)>,
-    ) -> Self {
+    pub fn new(stream: &'a [u8], little_endian: bool, segments: Vec<(u64, u64, u64, u64)>) -> Self {
         Self {
             stream,
             cursor: 0,
@@ -125,7 +121,7 @@ impl<'a, 'p> DataInCodeIter<'a, 'p> {
     }
 
     /// An iterator that yields nothing.
-    pub(crate) fn empty() -> Self {
+    pub fn empty() -> Self {
         Self::new(&[], true, Vec::new())
     }
 }
